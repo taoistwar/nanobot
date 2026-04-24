@@ -1,4 +1,17 @@
-"""Memory system: pure file I/O store, lightweight Consolidator, and Dream processor."""
+"""Memory system: pure file I/O store, lightweight Consolidator, and Dream processor.
+
+记忆系统：纯文件 I/O 存储、轻量级 Consolidator 和 Dream 处理器。
+
+This module provides three key components:
+1. MemoryStore: Pure file I/O for memory files (MEMORY.md, history.jsonl, etc.)
+2. Consolidator: Token-budget triggered consolidation of session history
+3. Dream: Cron-scheduled memory analysis and processing
+
+该模块提供三个关键组件：
+1. MemoryStore: 记忆文件（MEMORY.md、history.jsonl 等）的纯文件 I/O
+2. Consolidator: 基于 token 预算触发的会话历史整合
+3. Dream: 定时记忆分析和处理
+"""
 
 from __future__ import annotations
 
@@ -30,16 +43,41 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 
 class MemoryStore:
-    """Pure file I/O for memory files: MEMORY.md, history.jsonl, SOUL.md, USER.md."""
+    """Pure file I/O for memory files: MEMORY.md, history.jsonl, SOUL.md, USER.md.
+    
+    记忆文件的纯文件 I/O：MEMORY.md、history.jsonl、SOUL.md、USER.md。
+    
+    This class handles all file operations for the memory system:
+    - Reading/writing MEMORY.md (long-term facts)
+    - Managing history.jsonl (append-only conversation history)
+    - Processing SOUL.md (agent identity) and USER.md (user preferences)
+    - Cursor tracking for incremental processing
+    - Git integration for version control
+    
+    该类处理记忆系统的所有文件操作：
+    - 读取/写入 MEMORY.md（长期事实）
+    - 管理 history.jsonl（仅追加的对话历史）
+    - 处理 SOUL.md（代理身份）和 USER.md（用户偏好）
+    - 增量处理的游标跟踪
+    - Git 集成的版本控制
+    """
 
-    _DEFAULT_MAX_HISTORY = 1000
-    _LEGACY_ENTRY_START_RE = re.compile(r"^\[(\d{4}-\d{2}-\d{2}[^\]]*)\]\s*")
-    _LEGACY_TIMESTAMP_RE = re.compile(r"^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2})\]\s*")
+    _DEFAULT_MAX_HISTORY = 1000  # Default max history entries / 默认最大历史条目数
+    _LEGACY_ENTRY_START_RE = re.compile(r"^\[(\d{4}-\d{2}-\d{2}[^\]]*)\]\s*")  # Regex for legacy entry start / 旧版条目开始的正则表达式
+    _LEGACY_TIMESTAMP_RE = re.compile(r"^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2})\]\s*")  # Regex for legacy timestamp / 旧版时间戳的正则表达式
     _LEGACY_RAW_MESSAGE_RE = re.compile(
         r"^\[\d{4}-\d{2}-\d{2}[^\]]*\]\s+[A-Z][A-Z0-9_]*(?:\s+\[tools:\s*[^\]]+\])?:"
-    )
+    )  # Regex for raw legacy messages / 旧版原始消息的正则表达式
 
     def __init__(self, workspace: Path, max_history_entries: int = _DEFAULT_MAX_HISTORY):
+        """Initialize the memory store.
+        
+        初始化记忆存储。
+        
+        Args:
+            workspace: Workspace directory path / 工作区目录路径
+            max_history_entries: Maximum history entries to retain / 保留的最大历史条目数
+        """
         self.workspace = workspace
         self.max_history_entries = max_history_entries
         self.memory_dir = ensure_dir(workspace / "memory")

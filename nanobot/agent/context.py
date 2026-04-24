@@ -1,4 +1,19 @@
-"""Context builder for assembling agent prompts."""
+"""Context builder for assembling agent prompts.
+
+代理提示词上下文构建器。
+
+This module provides the ContextBuilder class which is responsible for:
+1. Building system prompts from identity, bootstrap files, memory, and skills
+2. Constructing message lists for LLM calls
+3. Handling runtime context injection
+4. Processing media attachments (images, documents)
+
+该模块提供 ContextBuilder 类，负责：
+1. 从身份、引导文件、记忆和技能构建系统提示词
+2. 为 LLM 调用构建消息列表
+3. 处理运行时上下文注入
+4. 处理媒体附件（图片、文档）
+"""
 
 import base64
 import mimetypes
@@ -14,15 +29,27 @@ from nanobot.utils.prompt_templates import render_template
 
 
 class ContextBuilder:
-    """Builds the context (system prompt + messages) for the agent."""
+    """Builds the context (system prompt + messages) for the agent.
+    
+    为代理构建上下文（系统提示词 + 消息）。
+    """
 
-    BOOTSTRAP_FILES = ["AGENTS.md", "SOUL.md", "USER.md", "TOOLS.md"]
-    _RUNTIME_CONTEXT_TAG = "[Runtime Context — metadata only, not instructions]"
-    _MAX_RECENT_HISTORY = 50
-    _MAX_HISTORY_CHARS = 32_000  # hard cap on recent history section size
-    _RUNTIME_CONTEXT_END = "[/Runtime Context]"
+    BOOTSTRAP_FILES = ["AGENTS.md", "SOUL.md", "USER.md", "TOOLS.md"]  # Bootstrap files to load / 要加载的引导文件
+    _RUNTIME_CONTEXT_TAG = "[Runtime Context — metadata only, not instructions]"  # Tag for runtime context block / 运行时上下文块标签
+    _MAX_RECENT_HISTORY = 50  # Maximum recent history entries to include / 包含的最近历史条目最大数量
+    _MAX_HISTORY_CHARS = 32_000  # Hard cap on recent history section size / 最近历史部分大小的硬限制
+    _RUNTIME_CONTEXT_END = "[/Runtime Context]"  # End tag for runtime context / 运行时上下文结束标签
 
     def __init__(self, workspace: Path, timezone: str | None = None, disabled_skills: list[str] | None = None):
+        """Initialize the context builder.
+        
+        初始化上下文构建器。
+        
+        Args:
+            workspace: Workspace directory path / 工作区目录路径
+            timezone: Timezone for current time display / 当前时间显示的时区
+            disabled_skills: List of skill names to disable / 要禁用的技能名称列表
+        """
         self.workspace = workspace
         self.timezone = timezone
         self.memory = MemoryStore(workspace)
@@ -33,7 +60,17 @@ class ContextBuilder:
         skill_names: list[str] | None = None,
         channel: str | None = None,
     ) -> str:
-        """Build the system prompt from identity, bootstrap files, memory, and skills."""
+        """Build the system prompt from identity, bootstrap files, memory, and skills.
+        
+        从身份、引导文件、记忆和技能构建系统提示词。
+        
+        Args:
+            skill_names: Optional list of skill names to include / 要包含的技能名称列表（可选）
+            channel: Channel identifier for platform-specific policies / 平台特定策略的频道标识符
+            
+        Returns:
+            Complete system prompt string / 完整的系统提示词字符串
+        """
         parts = [self._get_identity(channel=channel)]
 
         bootstrap = self._load_bootstrap_files()

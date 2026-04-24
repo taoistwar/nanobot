@@ -1,4 +1,21 @@
-"""Shared execution loop for tool-using agents."""
+"""Shared execution loop for tool-using agents.
+
+使用工具的代理的共享执行循环。
+
+This module provides the core agent execution loop that:
+1. Manages message history and context
+2. Calls LLM with tools
+3. Executes tool calls
+4. Handles errors and retries
+5. Supports streaming and progress callbacks
+
+该模块提供核心代理执行循环，负责：
+1. 管理消息历史和上下文
+2. 使用工具调用 LLM
+3. 执行工具调用
+4. 处理错误和重试
+5. 支持流式传输和进度回调
+"""
 
 from __future__ import annotations
 
@@ -50,7 +67,34 @@ _BACKFILL_CONTENT = "[Tool result unavailable — call was interrupted or lost]"
 
 @dataclass(slots=True)
 class AgentRunSpec:
-    """Configuration for a single agent execution."""
+    """Configuration for a single agent execution.
+    
+    单个代理执行的配置。
+    
+    Attributes:
+        initial_messages: Initial message list for the LLM / LLM 的初始消息列表
+        tools: Tool registry for executing tool calls / 执行工具调用的工具注册表
+        model: Model name to use / 要使用的模型名称
+        max_iterations: Maximum tool execution iterations / 最大工具执行迭代次数
+        max_tool_result_chars: Maximum characters per tool result / 每个工具结果的最大字符数
+        temperature: LLM temperature for sampling / LLM 采样温度
+        max_tokens: Maximum completion tokens / 最大补全 token 数
+        reasoning_effort: Reasoning effort level for reasoning models / 推理模型的推理努力级别
+        hook: Lifecycle hook for customization / 用于自定义的生命周期钩子
+        error_message: Error message template / 错误消息模板
+        max_iterations_message: Message when max iterations reached / 达到最大迭代次数时的消息
+        concurrent_tools: Whether to run tools concurrently / 是否并发执行工具
+        fail_on_tool_error: Whether to fail on tool errors / 是否在工具错误时失败
+        workspace: Workspace directory path / 工作区目录路径
+        session_key: Session identifier / 会话标识符
+        context_window_tokens: Context window size in tokens / 上下文窗口大小（token 数）
+        context_block_limit: Maximum context blocks / 最大上下文块数
+        provider_retry_mode: Provider retry mode / 提供商重试模式
+        progress_callback: Callback for progress updates / 进度更新回调
+        retry_wait_callback: Callback for retry wait / 重试等待回调
+        checkpoint_callback: Callback for checkpoints / 检查点回调
+        injection_callback: Callback for message injections / 消息注入回调
+    """
 
     initial_messages: list[dict[str, Any]]
     tools: ToolRegistry
@@ -78,22 +122,50 @@ class AgentRunSpec:
 
 @dataclass(slots=True)
 class AgentRunResult:
-    """Outcome of a shared agent execution."""
-
-    final_content: str | None
-    messages: list[dict[str, Any]]
-    tools_used: list[str] = field(default_factory=list)
-    usage: dict[str, int] = field(default_factory=dict)
-    stop_reason: str = "completed"
-    error: str | None = None
-    tool_events: list[dict[str, str]] = field(default_factory=list)
-    had_injections: bool = False
+    """Outcome of a single agent execution.
+    
+    单个代理执行的结果。
+    
+    Attributes:
+        final_content: Final response content from the agent / 代理的最终响应内容
+        messages: Complete message history after execution / 执行后的完整消息历史
+        tools_used: List of tool names that were used / 使用的工具名称列表
+        usage: Token usage statistics / Token 使用统计
+        stop_reason: Reason for stopping the loop / 停止循环的原因
+        error: Error message if any / 错误消息（如果有）
+        tool_events: Tool execution events / 工具执行事件
+        had_injections: Whether follow-up messages were injected mid-turn / 是否在轮次中注入了后续消息
+    """
 
 
 class AgentRunner:
-    """Run a tool-capable LLM loop without product-layer concerns."""
+    """Run a tool-capable LLM loop without product-layer concerns.
+    
+    运行支持工具的 LLM 循环，无需产品层关注。
+    
+    This class provides the core execution loop for agents that use tools.
+    It handles:
+    - Message history management
+    - LLM requests with tool definitions
+    - Tool execution and result handling
+    - Error recovery and retry logic
+    - Context window management
+    
+    该类为使用工具的代理提供核心执行循环。
+    它处理：
+    - 消息历史管理
+    - 带工具定义的 LLM 请求
+    - 工具执行和结果处理
+    - 错误恢复和重试逻辑
+    - 上下文窗口管理
+    """
 
     def __init__(self, provider: LLMProvider):
+        """Initialize the agent runner.
+        
+        Args:
+            provider: LLM provider instance / LLM 提供商实例
+        """
         self.provider = provider
 
     @staticmethod
