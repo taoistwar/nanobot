@@ -1,4 +1,19 @@
-"""File system tools: read, write, edit, list."""
+"""File system tools: read, write, edit, list.
+
+文件系统工具：读取、写入、编辑、列表。
+
+This module provides tools for interacting with the filesystem:
+- read_file: Read file contents with pagination support
+- write_file: Create or overwrite files
+- edit_file: Edit files with search-replace operations
+- list_dir: List directory contents
+
+本模块提供与文件系统交互的工具：
+- read_file：读取文件内容，支持分页
+- write_file：创建或覆盖文件
+- edit_file：使用搜索替换操作编辑文件
+- list_dir：列出目录内容
+"""
 
 import difflib
 import mimetypes
@@ -20,7 +35,7 @@ def _resolve_path(
     allowed_dir: Path | None = None,
     extra_allowed_dirs: list[Path] | None = None,
 ) -> Path:
-    """Resolve path against workspace (if relative) and enforce directory restriction."""
+    """解析路径（相对于工作区）并执行目录限制。/ Resolve path against workspace (if relative) and enforce directory restriction."""
     p = Path(path).expanduser()
     if not p.is_absolute() and workspace:
         p = workspace / p
@@ -34,6 +49,7 @@ def _resolve_path(
 
 
 def _is_under(path: Path, directory: Path) -> bool:
+    """检查路径是否在指定目录下。/ Check if path is under the specified directory."""
     try:
         path.relative_to(directory.resolve())
         return True
@@ -42,7 +58,7 @@ def _is_under(path: Path, directory: Path) -> bool:
 
 
 class _FsTool(Tool):
-    """Shared base for filesystem tools — common init and path resolution."""
+    """文件系统工具的共享基类 — 通用初始化和路径解析。/ Shared base for filesystem tools — common init and path resolution."""
 
     def __init__(
         self,
@@ -72,7 +88,7 @@ _BLOCKED_DEVICE_PATHS = frozenset({
 
 
 def _is_blocked_device(path: str | Path) -> bool:
-    """Check if path is a blocked device that could hang or produce infinite output."""
+    """检查路径是否为被阻止的设备（可能导致挂起或无限输出）。/ Check if path is a blocked device that could hang or produce infinite output."""
     import re
     raw = str(path)
 
@@ -96,7 +112,7 @@ def _is_blocked_device(path: str | Path) -> bool:
 
 
 def _parse_page_range(pages: str, total: int) -> tuple[int, int]:
-    """Parse a page range like '2-5' into 0-based (start, end) inclusive."""
+    """将页面范围（如 '2-5'）解析为从 0 开始的 (start, end) 包含区间。/ Parse a page range like '2-5' into 0-based (start, end) inclusive."""
     parts = pages.strip().split("-")
     if len(parts) == 1:
         p = int(parts[0])
@@ -124,7 +140,7 @@ def _parse_page_range(pages: str, total: int) -> tuple[int, int]:
     )
 )
 class ReadFileTool(_FsTool):
-    """Read file contents with optional line-based pagination."""
+    """读取文件内容，支持可选的基于行的分页。/ Read file contents with optional line-based pagination."""
 
     _MAX_CHARS = 128_000
     _DEFAULT_LIMIT = 2000
@@ -132,10 +148,12 @@ class ReadFileTool(_FsTool):
 
     @property
     def name(self) -> str:
+        """工具名称：read_file。/ Tool name: read_file."""
         return "read_file"
 
     @property
     def description(self) -> str:
+        """工具描述：读取文件内容，支持文本、图片和文档格式。/ Tool description: Read file contents supporting text, images, and document formats."""
         return (
             "Read a file (text, image, or document). "
             "Text output format: LINE_NUM|CONTENT. "
@@ -147,9 +165,42 @@ class ReadFileTool(_FsTool):
 
     @property
     def read_only(self) -> bool:
+        """标记为只读工具，不修改文件系统。/ Mark as read-only tool that does not modify the filesystem."""
         return True
 
     async def execute(self, path: str | None = None, offset: int = 1, limit: int | None = None, pages: str | None = None, **kwargs: Any) -> Any:
+
+        """执行文件读取操作。/ Execute file read operation.
+
+
+        
+
+
+        Args:
+
+
+            path: 要读取的文件路径。/ File path to read.
+
+
+            offset: 开始读取的行号（从 1 开始）。/ Line number to start reading (1-indexed).
+
+
+            limit: 最大读取行数。/ Maximum number of lines to read.
+
+
+            pages: PDF 文件的页码范围（如 \'1-5\'）。/ Page range for PDF files (e.g., \'1-5\').
+
+
+        
+
+
+        Returns:
+
+
+            文件内容或错误消息。/ File contents or error message.
+
+
+        """
         try:
             if not path:
                 return "Error reading file: Unknown path"
@@ -264,6 +315,33 @@ class ReadFileTool(_FsTool):
             return f"Error reading file: {e}"
 
     def _read_pdf(self, fp: Path, pages: str | None) -> str:
+
+
+        """读取 PDF 文件并提取文本内容。/ Read PDF file and extract text content.
+
+
+        
+
+
+        Args:
+
+
+            fp: PDF 文件路径。/ PDF file path.
+
+
+            pages: 可选的页码范围（如 \'1-5\'）。/ Optional page range (e.g., \'1-5\').
+
+
+        
+
+
+        Returns:
+
+
+            提取的文本内容或错误消息。/ Extracted text content or error message.
+
+
+        """
         try:
             import fitz  # pymupdf
         except ImportError:
@@ -310,6 +388,30 @@ class ReadFileTool(_FsTool):
         return result
 
     def _read_office_doc(self, fp: Path) -> str:
+
+
+        """读取 Office 文档（DOCX/XLSX/PPTX）并提取文本。/ Read Office document (DOCX/XLSX/PPTX) and extract text.
+
+
+        
+
+
+        Args:
+
+
+            fp: Office 文件路径。/ Office file path.
+
+
+        
+
+
+        Returns:
+
+
+            提取的文本内容或错误消息。/ Extracted text content or error message.
+
+
+        """
         from nanobot.utils.document import extract_text
 
         result = extract_text(fp)
@@ -342,7 +444,7 @@ class ReadFileTool(_FsTool):
     )
 )
 class WriteFileTool(_FsTool):
-    """Write content to a file."""
+    """写入内容到文件，创建或覆盖。/ Write content to a file, creating or overwriting."""
 
     @property
     def name(self) -> str:
@@ -350,6 +452,7 @@ class WriteFileTool(_FsTool):
 
     @property
     def description(self) -> str:
+        """工具描述：写入内容到文件。/ Tool description: Write content to a file."""
         return (
             "Write content to a file. Overwrites if the file already exists; "
             "creates parent directories as needed. "
@@ -357,6 +460,15 @@ class WriteFileTool(_FsTool):
         )
 
     async def execute(self, path: str | None = None, content: str | None = None, **kwargs: Any) -> str:
+        """执行文件写入操作。/ Execute file write operation.
+        
+        Args:
+            path: 要写入的文件路径。/ File path to write to.
+            content: 要写入的内容。/ Content to write.
+        
+        Returns:
+            成功消息或错误消息。/ Success message or error message.
+        """
         try:
             if not path:
                 raise ValueError("Unknown path")
@@ -385,10 +497,12 @@ _QUOTE_TABLE = str.maketrans({
 
 
 def _normalize_quotes(s: str) -> str:
+    """标准化引号：将花体引号转换为直引号。/ Normalize quotes: convert curly quotes to straight quotes."""
     return s.translate(_QUOTE_TABLE)
 
 
 def _curly_double_quotes(text: str) -> str:
+    """将直双引号转换为花体双引号。/ Convert straight double quotes to curly double quotes."""
     parts: list[str] = []
     opening = True
     for ch in text:
@@ -401,6 +515,7 @@ def _curly_double_quotes(text: str) -> str:
 
 
 def _curly_single_quotes(text: str) -> str:
+    """将直单引号转换为花体单引号。/ Convert straight single quotes to curly single quotes."""
     parts: list[str] = []
     opening = True
     for i, ch in enumerate(text):
@@ -418,7 +533,7 @@ def _curly_single_quotes(text: str) -> str:
 
 
 def _preserve_quote_style(old_text: str, actual_text: str, new_text: str) -> str:
-    """Preserve curly quote style when a quote-normalized fallback matched."""
+    """保留花体引号风格，当引号标准化的后备匹配成功时。/ Preserve curly quote style when a quote-normalized fallback matched."""
     if _normalize_quotes(old_text.strip()) != _normalize_quotes(actual_text.strip()) or old_text == actual_text:
         return new_text
 
@@ -431,11 +546,12 @@ def _preserve_quote_style(old_text: str, actual_text: str, new_text: str) -> str
 
 
 def _leading_ws(line: str) -> str:
+    """提取行首的空格和制表符。/ Extract leading whitespace (spaces and tabs) from a line."""
     return line[: len(line) - len(line.lstrip(" \t"))]
 
 
 def _reindent_like_match(old_text: str, actual_text: str, new_text: str) -> str:
-    """Preserve the outer indentation from the actual matched block."""
+    """保留实际匹配块的外部缩进。/ Preserve the outer indentation from the actual matched block."""
     old_lines = old_text.split("\n")
     actual_lines = actual_text.split("\n")
     if len(old_lines) != len(actual_lines):
@@ -472,13 +588,15 @@ def _reindent_like_match(old_text: str, actual_text: str, new_text: str) -> str:
 
 @dataclass(slots=True)
 class _MatchSpan:
-    start: int
-    end: int
-    text: str
-    line: int
+    """表示文本匹配片段的跨度。/ Represents a span of matched text."""
+    start: int  # 匹配起始位置。/ Match start position.
+    end: int    # 匹配结束位置。/ Match end position.
+    text: str   # 匹配的文本。/ Matched text.
+    line: int   # 匹配所在行号（从 1 开始）。/ Line number of match (1-indexed).
 
 
 def _find_exact_matches(content: str, old_text: str) -> list[_MatchSpan]:
+    """查找完全匹配的子串。/ Find exact substring matches."""
     matches: list[_MatchSpan] = []
     start = 0
     while True:
@@ -546,6 +664,7 @@ def _find_trim_matches(content: str, old_text: str, *, normalize_quotes: bool = 
 
 
 def _find_quote_matches(content: str, old_text: str) -> list[_MatchSpan]:
+    """通过标准化引号查找匹配。/ Find matches by normalizing quotes."""
     norm_content = _normalize_quotes(content)
     norm_old = _normalize_quotes(old_text)
     matches: list[_MatchSpan] = []
@@ -567,7 +686,7 @@ def _find_quote_matches(content: str, old_text: str) -> list[_MatchSpan]:
 
 
 def _find_matches(content: str, old_text: str) -> list[_MatchSpan]:
-    """Locate all matches using progressively looser strategies."""
+    """使用渐进式宽松策略定位所有匹配。/ Locate all matches using progressively looser strategies."""
     for matcher in (
         lambda: _find_exact_matches(content, old_text),
         lambda: _find_trim_matches(content, old_text),
@@ -581,16 +700,17 @@ def _find_matches(content: str, old_text: str) -> list[_MatchSpan]:
 
 
 def _find_match_line_numbers(content: str, old_text: str) -> list[int]:
-    """Return 1-based starting line numbers for the current matching strategies."""
+    """返回当前匹配策略的从 1 开始的行号。/ Return 1-based starting line numbers for the current matching strategies."""
     return [match.line for match in _find_matches(content, old_text)]
 
 
 def _collapse_internal_whitespace(text: str) -> str:
+    """ collapse 内部空白字符用于比较。/ Collapse internal whitespace for comparison."""
     return "\n".join(" ".join(line.split()) for line in text.splitlines())
 
 
 def _diagnose_near_match(old_text: str, actual_text: str) -> list[str]:
-    """Return actionable hints describing why text was close but not exact."""
+    """返回描述文本为何接近但不完全匹配的可操作提示。/ Return actionable hints describing why text was close but not exact."""
     hints: list[str] = []
 
     if old_text.lower() == actual_text.lower() and old_text != actual_text:
@@ -606,7 +726,7 @@ def _diagnose_near_match(old_text: str, actual_text: str) -> list[str]:
 
 
 def _best_window(old_text: str, content: str) -> tuple[float, int, list[str], list[str]]:
-    """Find the closest line-window match and return ratio/start/snippet/hints."""
+    """查找最接近的行窗口匹配并返回相似度/起始位置/片段/提示。/ Find the closest line-window match and return ratio/start/snippet/hints."""
     lines = content.splitlines(keepends=True)
     old_lines = old_text.splitlines(keepends=True)
     window = max(1, len(old_lines))
@@ -627,7 +747,7 @@ def _best_window(old_text: str, content: str) -> tuple[float, int, list[str], li
 
 
 def _find_match(content: str, old_text: str) -> tuple[str | None, int]:
-    """Locate old_text in content with a multi-level fallback chain:
+    """在内容中查找 old_text，使用多级降级链。/ Locate old_text in content with a multi-level fallback chain.
 
     1. Exact substring match
     2. Line-trimmed sliding window (handles indentation differences)
@@ -652,13 +772,14 @@ def _find_match(content: str, old_text: str) -> tuple[str | None, int]:
     )
 )
 class EditFileTool(_FsTool):
-    """Edit a file by replacing text with fallback matching."""
+    """编辑文件，通过替换文本并支持降级匹配。/ Edit a file by replacing text with fallback matching."""
 
     _MAX_EDIT_FILE_SIZE = 1024 * 1024 * 1024  # 1 GiB
     _MARKDOWN_EXTS = frozenset({".md", ".mdx", ".markdown"})
 
     @property
     def name(self) -> str:
+        """工具名称：edit_file。/ Tool name: edit_file."""
         return "edit_file"
 
     @property
@@ -672,7 +793,7 @@ class EditFileTool(_FsTool):
 
     @staticmethod
     def _strip_trailing_ws(text: str) -> str:
-        """Strip trailing whitespace from each line."""
+        """从每行移除行尾空白。/ Strip trailing whitespace from each line."""
         return "\n".join(line.rstrip() for line in text.split("\n"))
 
     async def execute(
@@ -778,7 +899,7 @@ class EditFileTool(_FsTool):
             return f"Error editing file: {e}"
 
     def _file_not_found_msg(self, path: str, fp: Path) -> str:
-        """Build an error message with 'Did you mean ...?' suggestions."""
+        """构建包含'您可能指的是...'建议的错误消息。/ Build an error message with 'Did you mean ...?' suggestions."""
         parent = fp.parent
         suggestions: list[str] = []
         if parent.is_dir():
@@ -792,6 +913,7 @@ class EditFileTool(_FsTool):
 
     @staticmethod
     def _not_found_msg(old_text: str, content: str, path: str) -> str:
+        """当未找到匹配时生成诊断消息。/ Generate diagnostic message when no match is found."""
         best_ratio, best_start, best_window_lines, hints = _best_window(old_text, content)
         if best_ratio > 0.5:
             diff = "\n".join(difflib.unified_diff(
@@ -835,7 +957,7 @@ class EditFileTool(_FsTool):
     )
 )
 class ListDirTool(_FsTool):
-    """List directory contents with optional recursion."""
+    """列出目录内容，支持可选递归。/ List directory contents with optional recursion."""
 
     _DEFAULT_MAX = 200
     _IGNORE_DIRS = {
@@ -846,6 +968,7 @@ class ListDirTool(_FsTool):
 
     @property
     def name(self) -> str:
+        """工具名称：list_dir。/ Tool name: list_dir."""
         return "list_dir"
 
     @property
@@ -858,12 +981,23 @@ class ListDirTool(_FsTool):
 
     @property
     def read_only(self) -> bool:
+        """标记为只读工具，不修改文件系统。/ Mark as read-only tool that does not modify the filesystem."""
         return True
 
     async def execute(
         self, path: str | None = None, recursive: bool = False,
         max_entries: int | None = None, **kwargs: Any,
     ) -> str:
+        """执行目录列表操作。/ Execute directory listing operation.
+        
+        Args:
+            path: 要列出的目录路径。/ Directory path to list.
+            recursive: 是否递归列出所有文件。/ Recursively list all files.
+            max_entries: 最大返回条目数。/ Maximum entries to return.
+        
+        Returns:
+            目录内容列表或错误消息。/ Directory contents list or error message.
+        """
         try:
             if path is None:
                 raise ValueError("Unknown path")

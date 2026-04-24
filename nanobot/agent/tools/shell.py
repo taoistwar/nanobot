@@ -1,4 +1,13 @@
-"""Shell execution tool."""
+"""Shell execution tool.
+
+Shell 执行工具。
+
+This module provides the ExecTool for executing shell commands safely
+with timeout, output limits, and security checks.
+
+本模块提供 ExecTool 用于安全地执行 Shell 命令，
+具有超时、输出限制和安全检查功能。
+"""
 
 import asyncio
 import os
@@ -35,7 +44,7 @@ _IS_WINDOWS = sys.platform == "win32"
     )
 )
 class ExecTool(Tool):
-    """Tool to execute shell commands."""
+    """执行 Shell 命令的工具。/ Tool to execute shell commands."""
 
     def __init__(
         self,
@@ -48,6 +57,18 @@ class ExecTool(Tool):
         path_append: str = "",
         allowed_env_keys: list[str] | None = None,
     ):
+        """初始化执行工具。/ Initialize the execution tool.
+
+        Args:
+            timeout: 命令超时时间（秒）/ Command timeout in seconds (default 60)
+            working_dir: 默认工作目录 / Default working directory
+            deny_patterns: 禁止的命令正则模式 / Denied command regex patterns
+            allow_patterns: 允许的命令正则模式（白名单）/ Allowed command regex patterns (allowlist)
+            restrict_to_workspace: 是否限制在工作空间内 / Whether to restrict to workspace
+            sandbox: 沙箱类型 / Sandbox type
+            path_append: 追加到 PATH 的路径 / Path to append to PATH
+            allowed_env_keys: 允许传递的环境变量名 / Allowed environment variable names to pass
+        """
         self.timeout = timeout
         self.working_dir = working_dir
         self.sandbox = sandbox
@@ -77,6 +98,7 @@ class ExecTool(Tool):
 
     @property
     def name(self) -> str:
+        """工具名称：exec。/ Tool name: exec."""
         return "exec"
 
     _MAX_TIMEOUT = 600
@@ -94,12 +116,24 @@ class ExecTool(Tool):
 
     @property
     def exclusive(self) -> bool:
+        """标记为独占工具，命令串行执行。/ Mark as exclusive tool, commands execute serially."""
         return True
 
     async def execute(
         self, command: str, working_dir: str | None = None,
         timeout: int | None = None, **kwargs: Any,
     ) -> str:
+        """执行 Shell 命令。/ Execute a shell command.
+
+        Args:
+            command: 要执行的命令 / Command to execute
+            working_dir: 可选的工作目录 / Optional working directory
+            timeout: 可选的超时时间（秒）/ Optional timeout in seconds
+            **kwargs: 额外参数（未使用）/ Extra arguments (unused)
+
+        Returns:
+            命令输出和退出码 / Command output and exit code
+        """
         cwd = working_dir or self.working_dir or os.getcwd()
 
         # Prevent an LLM-supplied working_dir from escaping the configured
@@ -187,7 +221,16 @@ class ExecTool(Tool):
     async def _spawn(
         command: str, cwd: str, env: dict[str, str],
     ) -> asyncio.subprocess.Process:
-        """Launch *command* in a platform-appropriate shell."""
+        """在平台合适的 shell 中启动命令。/ Launch command in platform-appropriate shell.
+
+        Args:
+            command: 要执行的命令 / Command to execute
+            cwd: 工作目录 / Working directory
+            env: 环境变量 / Environment variables
+
+        Returns:
+            启动的子进程 / The spawned subprocess
+        """
         if _IS_WINDOWS:
             comspec = env.get("COMSPEC", os.environ.get("COMSPEC", "cmd.exe"))
             return await asyncio.create_subprocess_exec(
@@ -208,7 +251,11 @@ class ExecTool(Tool):
 
     @staticmethod
     async def _kill_process(process: asyncio.subprocess.Process) -> None:
-        """Kill a subprocess and reap it to prevent zombies."""
+        """杀死进程并回收以防止僵尸进程。/ Kill a subprocess and reap to prevent zombies.
+
+        Args:
+            process: 要终止的进程 / Process to terminate
+        """
         process.kill()
         try:
             await asyncio.wait_for(process.wait(), timeout=5.0)
@@ -222,7 +269,7 @@ class ExecTool(Tool):
                     logger.debug("Process already reaped or not found: {}", e)
 
     def _build_env(self) -> dict[str, str]:
-        """Build a minimal environment for subprocess execution.
+        """构建子进程执行的最小环境。/ Build minimal environment for subprocess execution.
 
         On Unix, only HOME/LANG/TERM are passed; ``bash -l`` sources the
         user's profile which sets PATH and other essentials.
@@ -230,6 +277,9 @@ class ExecTool(Tool):
         On Windows, ``cmd.exe`` has no login-profile mechanism, so a curated
         set of system variables (including PATH) is forwarded.  API keys and
         other secrets are still excluded.
+
+        Returns:
+            最小化环境变量字典 / Minimal environment variable dictionary
         """
         if _IS_WINDOWS:
             sr = os.environ.get("SYSTEMROOT", r"C:\Windows")
@@ -268,7 +318,15 @@ class ExecTool(Tool):
         return env
 
     def _guard_command(self, command: str, cwd: str) -> str | None:
-        """Best-effort safety guard for potentially destructive commands."""
+        """最佳努力安全检查潜在危险命令。/ Best-effort safety guard for potentially destructive commands.
+
+        Args:
+            command: 要检查的命令 / Command to check
+            cwd: 当前工作目录 / Current working directory
+
+        Returns:
+            如果命令被阻止则返回错误消息，否则返回 None / Error message if command is blocked, None otherwise
+        """
         cmd = command.strip()
         lower = cmd.lower()
 
@@ -310,6 +368,14 @@ class ExecTool(Tool):
 
     @staticmethod
     def _extract_absolute_paths(command: str) -> list[str]:
+        """从命令中提取绝对路径。/ Extract absolute paths from command.
+
+        Args:
+            command: 要分析的命令字符串 / Command string to analyze
+
+        Returns:
+            提取的绝对路径列表 / List of extracted absolute paths
+        """
         # Windows: match drive-root paths like `C:\` as well as `C:\path\to\file`
         # NOTE: `*` is required so `C:\` (nothing after the slash) is still extracted.
         win_paths = re.findall(r"[A-Za-z]:\\[^\s\"'|><;]*", command)

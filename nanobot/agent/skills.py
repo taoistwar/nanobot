@@ -1,4 +1,19 @@
-"""Skills loader for agent capabilities."""
+"""Skills loader for agent capabilities.
+
+代理技能的加载器。
+
+This module provides the SkillsLoader class which manages agent skills:
+- Loading skills from workspace and builtin directories
+- Parsing skill metadata from YAML frontmatter
+- Checking skill requirements (binaries, environment variables)
+- Building skill summaries for agent context
+
+该模块提供 SkillsLoader 类，管理代理技能：
+- 从工作区和内置目录加载技能
+- 从 YAML frontmatter 解析技能元数据
+- 检查技能要求（二进制文件、环境变量）
+- 为代理上下文构建技能摘要
+"""
 
 import json
 import os
@@ -9,9 +24,11 @@ from pathlib import Path
 import yaml
 
 # Default builtin skills directory (relative to this file)
+# 默认内置技能目录（相对于此文件）
 BUILTIN_SKILLS_DIR = Path(__file__).parent.parent / "skills"
 
 # Opening ---, YAML body (group 1), closing --- on its own line; supports CRLF.
+# 开头的 ---，YAML 主体（第 1 组），结尾的 --- 单独一行；支持 CRLF。
 _STRIP_SKILL_FRONTMATTER = re.compile(
     r"^---\s*\r?\n(.*?)\r?\n---\s*\r?\n?",
     re.DOTALL,
@@ -21,12 +38,25 @@ _STRIP_SKILL_FRONTMATTER = re.compile(
 class SkillsLoader:
     """
     Loader for agent skills.
+    
+    代理技能的加载器。
 
     Skills are markdown files (SKILL.md) that teach the agent how to use
     specific tools or perform certain tasks.
+    
+    技能是 markdown 文件（SKILL.md），教导代理如何使用特定工具或执行某些任务。
     """
 
     def __init__(self, workspace: Path, builtin_skills_dir: Path | None = None, disabled_skills: set[str] | None = None):
+        """Initialize the skills loader.
+        
+        初始化技能加载器。
+        
+        Args:
+            workspace: Workspace directory path / 工作区目录路径
+            builtin_skills_dir: Optional custom builtin skills directory / 可选的自定义内置技能目录
+            disabled_skills: Set of skill names to disable / 要禁用的技能名称集合
+        """
         self.workspace = workspace
         self.workspace_skills = workspace / "skills"
         self.builtin_skills = builtin_skills_dir or BUILTIN_SKILLS_DIR

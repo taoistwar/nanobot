@@ -1,4 +1,13 @@
-"""Spawn tool for creating background subagents."""
+"""Spawn tool for creating background subagents.
+
+Spawn 工具：用于创建后台子代理。
+
+This module provides the SpawnTool for spawning subagents
+to handle complex or time-consuming tasks in the background.
+
+本模块提供 SpawnTool 用于生成子代理
+以在后台处理复杂或耗时的任务。
+"""
 
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any
@@ -47,7 +56,18 @@ class SpawnTool(Tool):
         )
 
     async def execute(self, task: str, label: str | None = None, **kwargs: Any) -> str:
-        """Spawn a subagent to execute the given task."""
+        """Spawn a subagent to execute the given task.
+        
+        生成一个子代理来执行给定任务。
+        
+        Args:
+            task: The task for the subagent to complete / 子代理要完成的任务
+            label: Optional short label for the task (for display) / 可选的任务简短标签（用于显示）
+            **kwargs: Additional keyword arguments / 其他关键字参数
+        
+        Returns:
+            Result message from the subagent manager / 来自子代理管理器的结果消息
+        """
         return await self._manager.spawn(
             task=task,
             label=label,

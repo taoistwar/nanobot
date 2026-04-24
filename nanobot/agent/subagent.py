@@ -1,4 +1,18 @@
-"""Subagent manager for background task execution."""
+"""Subagent manager for background task execution.
+
+用于后台任务执行的子代理管理器。
+
+This module provides the SubagentManager class which allows the main agent
+to spawn background subagents for parallel task execution. Subagents can:
+- Run independently without blocking the main agent
+- Use a subset of tools (no message/spawn tools)
+- Report results back to the main agent via the message bus
+
+该模块提供 SubagentManager 类，允许主代理生成后台子代理以并行执行任务。子代理可以：
+- 独立运行而不阻塞主代理
+- 使用工具子集（无 message/spawn 工具）
+- 通过消息总线向主代理报告结果
+"""
 
 import asyncio
 import json
@@ -27,24 +41,44 @@ from nanobot.providers.base import LLMProvider
 
 @dataclass(slots=True)
 class SubagentStatus:
-    """Real-time status of a running subagent."""
-
-    task_id: str
-    label: str
-    task_description: str
-    started_at: float          # time.monotonic()
-    phase: str = "initializing"  # initializing | awaiting_tools | tools_completed | final_response | done | error
-    iteration: int = 0
-    tool_events: list = field(default_factory=list)   # [{name, status, detail}, ...]
-    usage: dict = field(default_factory=dict)          # token usage
-    stop_reason: str | None = None
-    error: str | None = None
+    """Real-time status of a running subagent.
+    
+    运行中子代理的实时状态。
+    
+    Attributes:
+        task_id: Unique task identifier / 唯一任务标识符
+        label: Human-readable label for display / 用于显示的人类可读标签
+        task_description: Full task description / 完整任务描述
+        started_at: Start time using time.monotonic() / 使用 time.monotonic() 的开始时间
+        phase: Current phase (initializing|awaiting_tools|tools_completed|final_response|done|error) / 当前阶段
+        iteration: Current iteration number / 当前迭代次数
+        tool_events: List of tool execution events / 工具执行事件列表
+        usage: Token usage statistics / Token 使用统计
+        stop_reason: Reason for stopping / 停止原因
+        error: Error message if any / 错误消息（如果有）
+    """
 
 
 class _SubagentHook(AgentHook):
-    """Hook for subagent execution — logs tool calls and updates status."""
+    """Hook for subagent execution — logs tool calls and updates status.
+    
+    用于子代理执行的钩子 - 记录工具调用并更新状态。
+    
+    This internal hook class is used to track subagent execution progress
+    and log tool calls for debugging purposes.
+    
+    此内部钩子类用于跟踪子代理执行进度并记录工具调用以供调试。
+    """
 
     def __init__(self, task_id: str, status: SubagentStatus | None = None) -> None:
+        """Initialize the subagent hook.
+        
+        初始 化子代理钩子。
+        
+        Args:
+            task_id: Task identifier / 任务标识符
+            status: Optional status object to update / 可选的状态对象以更新
+        """
         super().__init__()
         self._task_id = task_id
         self._status = status
@@ -68,7 +102,22 @@ class _SubagentHook(AgentHook):
 
 
 class SubagentManager:
-    """Manages background subagent execution."""
+    """Manages background subagent execution.
+    
+    管理后台子代理执行。
+    
+    This class provides the interface for spawning and managing subagents:
+    - Spawn new subagents with task descriptions
+    - Track running subagents per session
+    - Cancel subagents by session
+    - Announce results back to the main agent
+    
+    该类提供生成和管理子代理的接口：
+    - 生成带有任务描述的新子代理
+    - 跟踪每个会话的运行中子代理
+    - 按会话取消子代理
+    - 向主代理宣布结果
+    """
 
     def __init__(
         self,
@@ -82,6 +131,21 @@ class SubagentManager:
         restrict_to_workspace: bool = False,
         disabled_skills: list[str] | None = None,
     ):
+        """Initialize the subagent manager.
+        
+        初始 化子代理管理器。
+        
+        Args:
+            provider: LLM provider for subagent calls / 用于子代理调用的 LLM 提供商
+            workspace: Workspace directory path / 工作区目录路径
+            bus: Message bus for communication / 用于通信的消息总线
+            max_tool_result_chars: Maximum characters per tool result / 每个工具结果的最大字符数
+            model: Model name to use (defaults to provider default) / 要使用的模型名称（默认为提供商默认）
+            web_config: Web tools configuration / 网络工具配置
+            exec_config: Execution tools configuration / 执行工具配置
+            restrict_to_workspace: Whether to restrict tools to workspace / 是否限制工具在工作区内
+            disabled_skills: List of disabled skill names / 禁用的技能名称列表
+        """
         self.provider = provider
         self.workspace = workspace
         self.bus = bus

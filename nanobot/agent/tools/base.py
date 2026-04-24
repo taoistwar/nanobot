@@ -1,4 +1,17 @@
-"""Base class for agent tools."""
+"""Base class for agent tools.
+
+代理工具的基类。
+
+This module provides the foundational classes for building agent tools:
+- Schema: Abstract base for JSON Schema fragments describing tool parameters
+- Tool: Abstract base class for all agent tools
+- tool_parameters: Decorator for attaching JSON Schema to tool classes
+
+该模块提供构建代理工具的基础类：
+- Schema: 描述工具参数的 JSON Schema 片段的抽象基类
+- Tool: 所有代理工具的抽象基类
+- tool_parameters: 为工具类附加 JSON Schema 的装饰器
+"""
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable
@@ -8,40 +21,82 @@ from typing import Any, TypeVar
 _ToolT = TypeVar("_ToolT", bound="Tool")
 
 # Matches :meth:`Tool._cast_value` / :meth:`Schema.validate_json_schema_value` behavior
+# 匹配 :meth:`Tool._cast_value` / :meth:`Schema.validate_json_schema_value` 的行为
 _JSON_TYPE_MAP: dict[str, type | tuple[type, ...]] = {
-    "string": str,
-    "integer": int,
-    "number": (int, float),
-    "boolean": bool,
-    "array": list,
-    "object": dict,
+    "string": str,  # String type / 字符串类型
+    "integer": int,  # Integer type / 整数类型
+    "number": (int, float),  # Number type (int or float) / 数字类型（整数或浮点数）
+    "boolean": bool,  # Boolean type / 布尔类型
+    "array": list,  # Array type / 数组类型
+    "object": dict,  # Object type / 对象类型
 }
 
 
 class Schema(ABC):
     """Abstract base for JSON Schema fragments describing tool parameters.
+    
+    描述工具参数的 JSON Schema 片段的抽象基类。
 
     Concrete types live in :mod:`nanobot.agent.tools.schema`; all implement
     :meth:`to_json_schema` and :meth:`validate_value`. Class methods
     :meth:`validate_json_schema_value` and :meth:`fragment` are the shared validation and normalization entry points.
+    
+    具体类型位于 :mod:`nanobot.agent.tools.schema`；都实现
+    :meth:`to_json_schema` 和 :meth:`validate_value`。类方法
+    :meth:`validate_json_schema_value` 和 :meth:`fragment` 是共享的验证和规范化入口点。
     """
 
     @staticmethod
     def resolve_json_schema_type(t: Any) -> str | None:
-        """Resolve the non-null type name from JSON Schema ``type`` (e.g. ``['string','null']`` -> ``'string'``)."""
+        """Resolve the non-null type name from JSON Schema type.
+        
+        从 JSON Schema type 解析非 null 类型名称。
+        
+        For example, ``['string','null']`` -> ``'string'``.
+        例如，``['string','null']`` -> ``'string'``。
+        
+        Args:
+            t: Type value from JSON Schema / JSON Schema 的类型值
+            
+        Returns:
+            Non-null type name, or None if not found / 非 null 类型名称，如果未找到则返回 None
+        """
         if isinstance(t, list):
             return next((x for x in t if x != "null"), None)
         return t  # type: ignore[return-value]
 
     @staticmethod
     def subpath(path: str, key: str) -> str:
+        """Build a dotted path for nested validation errors.
+        
+        为嵌套验证错误构建点分隔路径。
+        
+        Args:
+            path: Current path prefix / 当前路径前缀
+            key: Next key to append / 要追加的下一个键
+            
+        Returns:
+            Dotted path string / 点分隔路径字符串
+        """
         return f"{path}.{key}" if path else key
 
     @staticmethod
     def validate_json_schema_value(val: Any, schema: dict[str, Any], path: str = "") -> list[str]:
-        """Validate ``val`` against a JSON Schema fragment; returns error messages (empty means valid).
+        """Validate value against a JSON Schema fragment.
+        
+        根据 JSON Schema 片段验证值。
 
         Used by :class:`Tool` and each concrete Schema's :meth:`validate_value`.
+        
+        由 :class:`Tool` 和每个具体 Schema 的 :meth:`validate_value` 使用。
+
+        Args:
+            val: Value to validate / 要验证的值
+            schema: JSON Schema fragment / JSON Schema 片段
+            path: Current path for error messages / 错误消息的当前路径
+            
+        Returns:
+            List of error messages (empty means valid) / 错误消息列表（空表示有效）
         """
         raw_type = schema.get("type")
         nullable = (isinstance(raw_type, list) and "null" in raw_type) or schema.get("nullable", False)

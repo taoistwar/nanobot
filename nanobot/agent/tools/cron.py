@@ -1,4 +1,17 @@
-"""Cron tool for scheduling reminders and tasks."""
+"""Cron tool for scheduling reminders and tasks.
+
+Cron 工具：用于调度提醒和任务。
+
+This module provides the CronTool for scheduling:
+- Recurring tasks with interval (every_seconds)
+- Scheduled tasks with cron expressions
+- One-time tasks with specific datetime
+
+本模块提供 CronTool 用于调度：
+- 使用间隔的循环任务（every_seconds）
+- 使用 cron 表达式的计划任务
+- 具有特定日期时间的一次性任务
+"""
 
 from contextvars import ContextVar
 from datetime import datetime
@@ -53,9 +66,15 @@ _CRON_PARAMETERS = tool_parameters_schema(
 
 @tool_parameters(_CRON_PARAMETERS)
 class CronTool(Tool):
-    """Tool to schedule reminders and recurring tasks."""
+    """调度假任务和提醒的工具。/ Tool to schedule reminders and recurring tasks."""
 
     def __init__(self, cron_service: CronService, default_timezone: str = "UTC"):
+        """初始化 CronTool。
+
+        Args:
+            cron_service: Cron 服务实例。/ Cron service instance.
+            default_timezone: 默认时区，默认为 UTC。/ Default timezone, defaults to UTC.
+        """
         self._cron = cron_service
         self._default_timezone = default_timezone
         self._channel: ContextVar[str] = ContextVar("cron_channel", default="")
@@ -63,20 +82,41 @@ class CronTool(Tool):
         self._in_cron_context: ContextVar[bool] = ContextVar("cron_in_context", default=False)
 
     def set_context(self, channel: str, chat_id: str) -> None:
-        """Set the current session context for delivery."""
+        """设置当前会话上下文用于投递。/ Set current session context for delivery.
+
+        Args:
+            channel: 会话渠道。/ Session channel.
+            chat_id: 会话 ID。/ Session ID.
+        """
         self._channel.set(channel)
         self._chat_id.set(chat_id)
 
     def set_cron_context(self, active: bool):
-        """Mark whether the tool is executing inside a cron job callback."""
+        """标记工具是否在 cron 作业回调中执行。/ Mark whether tool executes inside cron job callback.
+
+        Args:
+            active: 是否为 cron 作业上下文。/ Whether in cron job context.
+        """
         return self._in_cron_context.set(active)
 
     def reset_cron_context(self, token) -> None:
-        """Restore previous cron context."""
+        """恢复之前的 cron 上下文。/ Restore previous cron context.
+
+        Args:
+            token: 之前保存的上下文令牌。/ Previously saved context token.
+        """
         self._in_cron_context.reset(token)
 
     @staticmethod
     def _validate_timezone(tz: str) -> str | None:
+        """验证时区。/ Validate timezone.
+
+        Args:
+            tz: IANA 时区名称。/ IANA timezone name.
+
+        Returns:
+            如果时区无效则返回错误消息，否则返回 None。/ Error message if timezone is invalid, None otherwise.
+        """
         from zoneinfo import ZoneInfo
 
         try:
@@ -86,11 +126,27 @@ class CronTool(Tool):
         return None
 
     def _display_timezone(self, schedule: CronSchedule) -> str:
-        """Pick the most human-meaningful timezone for display."""
+        """选择最具人类可读性的时区用于显示。/ Pick most human-meaningful timezone for display.
+
+        Args:
+            schedule: Cron 计划。/ Cron schedule.
+
+        Returns:
+            要显示的时区名称。/ Timezone name for display.
+        """
         return schedule.tz or self._default_timezone
 
     @staticmethod
     def _format_timestamp(ms: int, tz_name: str) -> str:
+        """格式化时间戳。/ Format timestamp.
+
+        Args:
+            ms: 毫秒时间戳。/ Millisecond timestamp.
+            tz_name: 时区名称。/ Timezone name.
+
+        Returns:
+            格式化的 ISO 日期时间字符串。/ Formatted ISO datetime string.
+        """
         from zoneinfo import ZoneInfo
 
         dt = datetime.fromtimestamp(ms / 1000, tz=ZoneInfo(tz_name))
@@ -98,6 +154,7 @@ class CronTool(Tool):
 
     @property
     def name(self) -> str:
+        """工具名称：cron。/ Tool name: cron."""
         return "cron"
 
     @property
@@ -108,6 +165,14 @@ class CronTool(Tool):
         )
 
     def validate_params(self, params: dict[str, Any]) -> list[str]:
+        """验证参数。/ Validate parameters.
+
+        Args:
+            params: 要验证的参数字典。/ Parameters dictionary to validate.
+
+        Returns:
+            错误消息列表。/ List of error messages.
+        """
         errors = super().validate_params(params)
         action = params.get("action")
         if action == "add" and not str(params.get("message") or "").strip():
@@ -129,6 +194,23 @@ class CronTool(Tool):
         deliver: bool = True,
         **kwargs: Any,
     ) -> str:
+        """执行 Cron 工具操作。/ Execute Cron tool action.
+
+        Args:
+            action: 要执行的操作（add、list、remove）。/ Action to perform (add, list, remove).
+            name: 可选的作业名称。/ Optional job name.
+            message: 作业时执行的指令消息。/ Instruction message for job execution.
+            every_seconds: 重复任务的间隔秒数。/ Interval in seconds for recurring tasks.
+            cron_expr: 计划任务的 cron 表达式。/ Cron expression for scheduled tasks.
+            tz: 可选的 IANA 时区。/ Optional IANA timezone.
+            at: 一次性任务的 ISO 日期时间。/ ISO datetime for one-time task.
+            job_id: 要移除的作业 ID。/ Job ID to remove.
+            deliver: 是否将结果投递给用户。/ Whether to deliver result to user.
+            **kwargs: 其他关键字参数。/ Other keyword arguments.
+
+        Returns:
+            执行结果字符串。/ Execution result string.
+        """
         if action == "add":
             if self._in_cron_context.get():
                 return "Error: cannot schedule new jobs from within a cron job execution"
@@ -149,6 +231,20 @@ class CronTool(Tool):
         at: str | None,
         deliver: bool = True,
     ) -> str:
+        """添加作业。/ Add job.
+
+        Args:
+            name: 作业名称。/ Job name.
+            message: 作业时执行的指令消息。/ Instruction message for job execution.
+            every_seconds: 间隔秒数。/ Interval in seconds.
+            cron_expr: Cron 表达式。/ Cron expression.
+            tz: 时区。/ Timezone.
+            at: ISO 日期时间。/ ISO datetime.
+            deliver: 是否投递结果。/ Whether to deliver result.
+
+        Returns:
+            创建结果或错误消息。/ Creation result or error message.
+        """
         if not message:
             return (
                 "Error: cron action='add' requires a non-empty 'message' parameter "
@@ -221,7 +317,15 @@ class CronTool(Tool):
         return schedule.kind
 
     def _format_state(self, state: CronJobState, schedule: CronSchedule) -> list[str]:
-        """Format job run state as display lines."""
+        """将作业运行状态格式化为显示行。/ Format job run state as display lines.
+
+        Args:
+            state: 作业运行状态。/ Job run state.
+            schedule: 作业计划。/ Job schedule.
+
+        Returns:
+            格式化的状态行列表。/ Formatted status lines list.
+        """
         lines: list[str] = []
         display_tz = self._display_timezone(schedule)
         if state.last_run_at_ms:
@@ -238,11 +342,24 @@ class CronTool(Tool):
 
     @staticmethod
     def _system_job_purpose(job: CronJob) -> str:
+        """获取系统作业目的。/ Get system job purpose.
+
+        Args:
+            job: Cron 作业。/ Cron job.
+
+        Returns:
+            作业目的描述。/ Job purpose description.
+        """
         if job.name == "dream":
             return "Dream memory consolidation for long-term memory."
         return "System-managed internal job."
 
     def _list_jobs(self) -> str:
+        """列出作业。/ List jobs.
+
+        Returns:
+            格式化的作业列表字符串。/ Formatted jobs list string.
+        """
         jobs = self._cron.list_jobs()
         if not jobs:
             return "No scheduled jobs."
@@ -258,6 +375,14 @@ class CronTool(Tool):
         return "Scheduled jobs:\n" + "\n".join(lines)
 
     def _remove_job(self, job_id: str | None) -> str:
+        """移除作业。/ Remove job.
+
+        Args:
+            job_id: 要移除的作业 ID。/ Job ID to remove.
+
+        Returns:
+            移除结果或错误消息。/ Removal result or error message.
+        """
         if not job_id:
             return "Error: job_id is required for remove"
         result = self._cron.remove_job(job_id)

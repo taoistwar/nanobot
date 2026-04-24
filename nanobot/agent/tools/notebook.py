@@ -1,4 +1,17 @@
-"""NotebookEditTool — edit Jupyter .ipynb notebooks."""
+"""NotebookEditTool — edit Jupyter .ipynb notebooks.
+
+NotebookEditTool — 编辑 Jupyter .ipynb 笔记本。
+
+This module provides the NotebookEditTool for:
+- Replacing cell content
+- Inserting new cells
+- Deleting cells
+
+本模块提供 NotebookEditTool 用于：
+- 替换单元格内容
+- 插入新单元格
+- 删除单元格
+"""
 
 from __future__ import annotations
 
@@ -82,6 +95,22 @@ class NotebookEditTool(_FsTool):
         edit_mode: str = "replace",
         **kwargs: Any,
     ) -> str:
+        """Edit a Jupyter notebook cell.
+        
+        编辑 Jupyter 笔记本单元格。
+        
+        Args:
+            path: Path to the .ipynb notebook file / .ipynb 笔记本文件的路径
+            cell_index: 0-based index of the cell to edit / 要编辑的单元格的基于 0 的索引
+            new_source: New source content for the cell / 单元格的新源代码内容
+            cell_type: Cell type: 'code' or 'markdown' (default: code) / 单元格类型：'code' 或 'markdown'（默认：code）
+            edit_mode: Mode: 'replace' (default), 'insert' (after target), or 'delete' / 
+                       模式：'replace'（默认）、'insert'（在目标后）或 'delete'
+            **kwargs: Additional keyword arguments / 其他关键字参数
+        
+        Returns:
+            Success or error message / 成功或错误消息
+        """
         try:
             if not path:
                 return "Error: path is required"

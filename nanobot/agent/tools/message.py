@@ -1,4 +1,13 @@
-"""Message tool for sending messages to users."""
+"""Message tool for sending messages to users.
+
+消息工具：用于向用户发送消息。
+
+This module provides the MessageTool for sending messages
+to users on various chat channels (telegram, discord, etc.).
+
+本模块提供 MessageTool 用于在各种聊天频道
+（telegram、discord 等）上向用户发送消息。
+"""
 
 from contextvars import ContextVar
 from typing import Any, Awaitable, Callable
@@ -88,6 +97,24 @@ class MessageTool(Tool):
         buttons: list[list[str]] | None = None,
         **kwargs: Any
     ) -> str:
+        """Execute the message tool to send a message.
+        
+        执行消息工具以发送消息。
+        
+        Args:
+            content: The message content to send / 要发送的消息内容
+            channel: Optional: target channel (telegram, discord, etc.) / 可选：目标频道
+            chat_id: Optional: target chat/user ID / 可选：目标聊天/用户 ID
+            message_id: Optional: message ID to reply to / 可选：要回复的消息 ID
+            media: Optional: list of file paths to attach (images, audio, documents) / 
+                   可选：要附加的文件路径列表（图片、音频、文档）
+            buttons: Optional: inline keyboard buttons as list of rows, each row is list of button labels / 
+                     可选：内联键盘按钮，作为行的列表，每行是按钮标签的列表
+            **kwargs: Additional keyword arguments / 其他关键字参数
+        
+        Returns:
+            Success or error message / 成功或错误消息
+        """
         from nanobot.utils.helpers import strip_think
         content = strip_think(content)
 

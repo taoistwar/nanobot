@@ -1,8 +1,14 @@
 """Sandbox backends for shell command execution.
 
+Shell 命令执行的沙箱后端。
+
 To add a new backend, implement a function with the signature:
     _wrap_<name>(command: str, workspace: str, cwd: str) -> str
 and register it in _BACKENDS below.
+
+要添加新后端，请实现具有以下签名的函数：
+    _wrap_<name>(command: str, workspace: str, cwd: str) -> str
+并在下面的 _BACKENDS 中注册它。
 """
 
 import shlex
@@ -49,7 +55,23 @@ _BACKENDS = {"bwrap": _bwrap}
 
 
 def wrap_command(sandbox: str, command: str, workspace: str, cwd: str) -> str:
-    """Wrap *command* using the named sandbox backend."""
+    """Wrap *command* using the named sandbox backend.
+    
+    使用命名的沙箱后端包装 *command*。
+    
+    Args:
+        sandbox: The sandbox backend name (e.g., 'bwrap') / 沙箱后端名称（如 'bwrap'）
+        command: The shell command to wrap / 要包装的 shell 命令
+        workspace: The workspace directory path / 工作目录路径
+        cwd: The current working directory / 当前工作目录
+    
+    Returns:
+        The wrapped command string / 包装后的命令字符串
+    
+    Raises:
+        ValueError: If the sandbox backend is not recognized / 
+                    如果沙箱后端未被识别则抛出 ValueError
+    """
     if backend := _BACKENDS.get(sandbox):
         return backend(command, workspace, cwd)
     raise ValueError(f"Unknown sandbox backend {sandbox!r}. Available: {list(_BACKENDS)}")

@@ -1,4 +1,17 @@
-"""MCP client: connects to MCP servers and wraps their tools as native nanobot tools."""
+"""MCP client: connects to MCP servers and wraps their tools as native nanobot tools.
+
+MCP 客户端：连接到 MCP 服务器并将其工具包装为原生 nanobot 工具。
+
+This module provides MCP integration:
+- Connect to MCP servers (stdio or HTTP SSE)
+- Wrap MCP tools as nanobot tools
+- Handle transient connection errors with retry
+
+本模块提供 MCP 集成：
+- 连接到 MCP 服务器（stdio 或 HTTP SSE）
+- 将 MCP 工具包装为 nanobot 工具
+- 使用重试处理瞬态连接错误
+"""
 
 import asyncio
 import os
@@ -12,9 +25,8 @@ from loguru import logger
 from nanobot.agent.tools.base import Tool
 from nanobot.agent.tools.registry import ToolRegistry
 
-# Transient connection errors that warrant a single retry.
-# These typically happen when an MCP server restarts or a network
-# connection is interrupted between calls.
+# Transient connection errors that warrant a single retry / 需要单次重试的瞬态连接错误
+# These typically happen when an MCP server restarts or a network connection is interrupted between calls / 这些错误通常发生在 MCP 服务器重启或网络调用之间中断时
 _TRANSIENT_EXC_NAMES: frozenset[str] = frozenset((
     "ClosedResourceError",
     "BrokenResourceError",
@@ -26,16 +38,17 @@ _TRANSIENT_EXC_NAMES: frozenset[str] = frozenset((
     "ConnectionError",
 ))
 
+# Windows shell command wrappers that need special handling for MCP stdio servers / Windows 上需要特殊处理以支持 MCP stdio 服务器的 shell 命令包装器
 _WINDOWS_SHELL_LAUNCHERS: frozenset[str] = frozenset(("npx", "npm", "pnpm", "yarn", "bunx"))
 
 
 def _is_transient(exc: BaseException) -> bool:
-    """Check if an exception looks like a transient connection error."""
+    """Check if an exception looks like a transient connection error / 检查异常是否看起来像瞬态连接错误"""
     return type(exc).__name__ in _TRANSIENT_EXC_NAMES
 
 
 def _windows_command_basename(command: str) -> str:
-    """Return the lowercase basename for a Windows command or path."""
+    """Return the lowercase basename for a Windows command or path / 返回 Windows 命令或路径的小写基名"""
     return command.replace("\\", "/").rsplit("/", maxsplit=1)[-1].lower()
 
 
@@ -44,7 +57,7 @@ def _normalize_windows_stdio_command(
     args: list[str] | None,
     env: dict[str, str] | None,
 ) -> tuple[str, list[str], dict[str, str] | None]:
-    """Wrap Windows shell launchers so MCP stdio servers start reliably."""
+    """Wrap Windows shell launchers so MCP stdio servers start reliably / 包装 Windows shell 启动器以确保 MCP stdio 服务器可靠启动"""
     normalized_args = list(args or [])
     if os.name != "nt":
         return command, normalized_args, env
@@ -71,7 +84,7 @@ def _normalize_windows_stdio_command(
 
 
 def _extract_nullable_branch(options: Any) -> tuple[dict[str, Any], bool] | None:
-    """Return the single non-null branch for nullable unions."""
+    """Return the single non-null branch for nullable unions / 返回可空联合类型的单个非空分支"""
     if not isinstance(options, list):
         return None
 
@@ -91,7 +104,7 @@ def _extract_nullable_branch(options: Any) -> tuple[dict[str, Any], bool] | None
 
 
 def _normalize_schema_for_openai(schema: Any) -> dict[str, Any]:
-    """Normalize only nullable JSON Schema patterns for tool definitions."""
+    """Normalize only nullable JSON Schema patterns for tool definitions / 仅标准化可空 JSON Schema 模式以用于工具定义"""
     if not isinstance(schema, dict):
         return {"type": "object", "properties": {}}
 
@@ -132,9 +145,17 @@ def _normalize_schema_for_openai(schema: Any) -> dict[str, Any]:
 
 
 class MCPToolWrapper(Tool):
-    """Wraps a single MCP server tool as a nanobot Tool."""
+    """Wraps a single MCP server tool as a nanobot Tool / 将单个 MCP 服务器工具包装为 nanobot 工具"""
 
     def __init__(self, session, server_name: str, tool_def, tool_timeout: int = 30):
+        """Initialize the MCP tool wrapper / 初始化 MCP 工具包装器
+
+        Args:
+            session: MCP client session / MCP 客户端会话
+            server_name: Name of the MCP server / MCP 服务器名称
+            tool_def: MCP tool definition / MCP 工具定义
+            tool_timeout: Timeout in seconds for tool execution / 工具执行超时时间（秒）
+        """
         self._session = session
         self._original_name = tool_def.name
         self._name = f"mcp_{server_name}_{tool_def.name}"
@@ -145,20 +166,31 @@ class MCPToolWrapper(Tool):
 
     @property
     def name(self) -> str:
+        """Return the tool name / 返回工具名称"""
         return self._name
 
     @property
     def description(self) -> str:
+        """Return the tool description / 返回工具描述"""
         return self._description
 
     @property
     def parameters(self) -> dict[str, Any]:
+        """Return the tool parameters schema / 返回工具参数模式"""
         return self._parameters
 
     async def execute(self, **kwargs: Any) -> str:
+        """Execute the MCP tool with given arguments / 使用给定参数执行 MCP 工具
+
+        Args:
+            **kwargs: Tool arguments / 工具参数
+
+        Returns:
+            Tool execution result as string / 工具执行结果字符串
+        """
         from mcp import types
 
-        for attempt in range(2):  # At most 1 retry
+        for attempt in range(2):  # At most 1 retry / 最多重试 1 次
             try:
                 result = await asyncio.wait_for(
                     self._session.call_tool(self._original_name, arguments=kwargs),
@@ -172,6 +204,7 @@ class MCPToolWrapper(Tool):
             except asyncio.CancelledError:
                 # MCP SDK's anyio cancel scopes can leak CancelledError on timeout/failure.
                 # Re-raise only if our task was externally cancelled (e.g. /stop).
+                # MCP SDK 的 anyio 取消作用域可能在超时/失败时泄漏 CancelledError / 仅在任务被外部取消时重新抛出（例如 /stop）
                 task = asyncio.current_task()
                 if task is not None and task.cancelling() > 0:
                     raise
@@ -185,9 +218,10 @@ class MCPToolWrapper(Tool):
                             self._name,
                             type(exc).__name__,
                         )
-                        await asyncio.sleep(1)  # Brief backoff before retry
+                        await asyncio.sleep(1)  # Brief backoff before retry / 重试前的短暂退避
                         continue
                     # Second transient failure — give up with retry-specific message
+                    # 第二次瞬态失败 — 放弃并重试特定消息
                     logger.error(
                         "MCP tool '{}' failed after retry: {}: {}",
                         self._name,
@@ -203,7 +237,7 @@ class MCPToolWrapper(Tool):
                 )
                 return f"(MCP tool call failed: {type(exc).__name__})"
             else:
-                # Success — extract result
+                # Success — extract result / 成功 — 提取结果
                 parts = []
                 for block in result.content:
                     if isinstance(block, types.TextContent):
@@ -212,13 +246,21 @@ class MCPToolWrapper(Tool):
                         parts.append(str(block))
                 return "\n".join(parts) or "(no output)"
 
-        return "(MCP tool call failed)"  # Unreachable, but satisfies type checkers
+        return "(MCP tool call failed)"  # Unreachable, but satisfies type checkers / 不可达，但满足类型检查器
 
 
 class MCPResourceWrapper(Tool):
-    """Wraps an MCP resource URI as a read-only nanobot Tool."""
+    """Wraps an MCP resource URI as a read-only nanobot Tool / 将 MCP 资源 URI 包装为只读 nanobot 工具"""
 
     def __init__(self, session, server_name: str, resource_def, resource_timeout: int = 30):
+        """Initialize the MCP resource wrapper / 初始化 MCP 资源包装器
+
+        Args:
+            session: MCP client session / MCP 客户端会话
+            server_name: Name of the MCP server / MCP 服务器名称
+            resource_def: MCP resource definition / MCP 资源定义
+            resource_timeout: Timeout in seconds for resource read / 资源读取超时时间（秒）
+        """
         self._session = session
         self._uri = resource_def.uri
         self._name = f"mcp_{server_name}_resource_{resource_def.name}"
@@ -233,21 +275,33 @@ class MCPResourceWrapper(Tool):
 
     @property
     def name(self) -> str:
+        """Return the resource tool name / 返回资源工具名称"""
         return self._name
 
     @property
     def description(self) -> str:
+        """Return the resource tool description / 返回资源工具描述"""
         return self._description
 
     @property
     def parameters(self) -> dict[str, Any]:
+        """Return the resource tool parameters schema / 返回资源工具参数模式"""
         return self._parameters
 
     @property
     def read_only(self) -> bool:
+        """Return True indicating this is a read-only tool / 返回 True 表示这是只读工具"""
         return True
 
     async def execute(self, **kwargs: Any) -> str:
+        """Execute the MCP resource read operation / 执行 MCP 资源读取操作
+
+        Args:
+            **kwargs: Tool arguments (unused for resources) / 工具参数（资源不使用）
+
+        Returns:
+            Resource content as string / 资源内容字符串
+        """
         from mcp import types
 
         for attempt in range(2):
@@ -302,24 +356,33 @@ class MCPResourceWrapper(Tool):
                         parts.append(str(block))
                 return "\n".join(parts) or "(no output)"
 
-        return "(MCP resource read failed)"  # Unreachable
+        return "(MCP resource read failed)"  # Unreachable / 不可达
 
 
 class MCPPromptWrapper(Tool):
-    """Wraps an MCP prompt as a read-only nanobot Tool."""
+    """Wraps an MCP prompt as a read-only nanobot Tool / 将 MCP 提示词包装为只读 nanobot 工具"""
 
     def __init__(self, session, server_name: str, prompt_def, prompt_timeout: int = 30):
+        """Initialize the MCP prompt wrapper / 初始化 MCP 提示词包装器
+
+        Args:
+            session: MCP client session / MCP 客户端会话
+            server_name: Name of the MCP server / MCP 服务器名称
+            prompt_def: MCP prompt definition / MCP 提示词定义
+            prompt_timeout: Timeout in seconds for prompt call / 提示词调用超时时间（秒）
+        """
         self._session = session
         self._prompt_name = prompt_def.name
         self._name = f"mcp_{server_name}_prompt_{prompt_def.name}"
         desc = prompt_def.description or prompt_def.name
         self._description = (
             f"[MCP Prompt] {desc}\n"
-            "Returns a filled prompt template that can be used as a workflow guide."
+            "Returns a filled prompt template that can be used as a workflow guide / "
+            "返回可用于工作流指南的已填充提示词模板"
         )
         self._prompt_timeout = prompt_timeout
 
-        # Build parameters from prompt arguments
+        # Build parameters from prompt arguments / 从提示词参数构建参数
         properties: dict[str, Any] = {}
         required: list[str] = []
         for arg in prompt_def.arguments or []:
@@ -337,21 +400,33 @@ class MCPPromptWrapper(Tool):
 
     @property
     def name(self) -> str:
+        """Return the prompt tool name / 返回提示词工具名称"""
         return self._name
 
     @property
     def description(self) -> str:
+        """Return the prompt tool description / 返回提示词工具描述"""
         return self._description
 
     @property
     def parameters(self) -> dict[str, Any]:
+        """Return the prompt tool parameters schema / 返回提示词工具参数模式"""
         return self._parameters
 
     @property
     def read_only(self) -> bool:
+        """Return True indicating this is a read-only tool / 返回 True 表示这是只读工具"""
         return True
 
     async def execute(self, **kwargs: Any) -> str:
+        """Execute the MCP prompt call / 执行 MCP 提示词调用
+
+        Args:
+            **kwargs: Prompt arguments / 提示词参数
+
+        Returns:
+            Filled prompt template as string / 已填充的提示词模板字符串
+        """
         from mcp import types
         from mcp.shared.exceptions import McpError
 
@@ -420,17 +495,30 @@ class MCPPromptWrapper(Tool):
                         parts.append(str(content))
                 return "\n".join(parts) or "(no output)"
 
-        return "(MCP prompt call failed)"  # Unreachable
+        return "(MCP prompt call failed)"  # Unreachable / 不可达
 
 
 async def connect_mcp_servers(
     mcp_servers: dict, registry: ToolRegistry
 ) -> dict[str, AsyncExitStack]:
-    """Connect to configured MCP servers and register their tools, resources, prompts.
+    """Connect to configured MCP servers and register their tools, resources, and prompts / 连接到已配置的 MCP 服务器并注册其工具、资源和提示词
 
-    Returns a dict mapping server name -> its dedicated AsyncExitStack.
-    Each server gets its own stack and runs in its own task to prevent
-    cancel scope conflicts when multiple MCP servers are configured.
+    This function establishes connections to all configured MCP servers using their
+    specified transport type (stdio, SSE, or Streamable HTTP). Each server gets its
+    own AsyncExitStack and runs in a dedicated task to prevent cancel scope conflicts.
+    All discovered tools, resources, and prompts are registered with the provided
+    ToolRegistry.
+
+    此函数使用指定的传输类型（stdio、SSE 或 Streamable HTTP）连接到所有已配置的 MCP 服务器。
+    每个服务器都有自己的 AsyncExitStack 并在专用任务中运行，以防止取消作用域冲突。
+    所有发现的工具、资源和提示词都将注册到提供的 ToolRegistry 中。
+
+    Args:
+        mcp_servers: Dictionary of server configurations / 服务器配置字典
+        registry: ToolRegistry to register discovered tools / 用于注册已发现工具的工具注册表
+
+    Returns:
+        Dictionary mapping server name to its AsyncExitStack / 将服务器名称映射到其 AsyncExitStack 的字典
     """
     from mcp import ClientSession, StdioServerParameters
     from mcp.client.sse import sse_client
@@ -438,6 +526,22 @@ async def connect_mcp_servers(
     from mcp.client.streamable_http import streamable_http_client
 
     async def connect_single_server(name: str, cfg) -> tuple[str, AsyncExitStack | None]:
+        """Connect to a single MCP server and register its capabilities / 连接到单个 MCP 服务器并注册其功能
+
+        This nested function handles the connection logic for one MCP server, including
+        transport setup, session initialization, and capability discovery. It supports
+        stdio, SSE, and Streamable HTTP transports.
+
+        此嵌套函数处理单个 MCP 服务器的连接逻辑，包括传输设置、会话初始化和功能发现。
+        它支持 stdio、SSE 和 Streamable HTTP 传输。
+
+        Args:
+            name: Server name for identification / 用于标识的服务器名称
+            cfg: Server configuration object / 服务器配置对象
+
+        Returns:
+            Tuple of (server_name, AsyncExitStack or None) / （服务器名称，AsyncExitStack 或 None）元组
+        """
         server_stack = AsyncExitStack()
         await server_stack.__aenter__()
 

@@ -1,4 +1,15 @@
-"""Search tools: grep and glob."""
+"""Search tools: grep and glob.
+
+搜索工具：grep 和 glob。
+
+This module provides tools for searching files:
+- grep: Search file contents using regular expressions
+- glob: Find files matching patterns
+
+本模块提供搜索文件的工具：
+- grep：使用正则表达式搜索文件内容
+- glob：查找匹配模式的文件
+"""
 
 from __future__ import annotations
 
@@ -37,10 +48,12 @@ _TYPE_GLOB_MAP = {
 
 
 def _normalize_pattern(pattern: str) -> str:
+    """规范化 glob 模式：去除空白并将反斜杠替换为正斜杠。/ Normalize glob pattern: strip whitespace and replace backslashes with forward slashes."""
     return pattern.strip().replace("\\", "/")
 
 
 def _match_glob(rel_path: str, name: str, pattern: str) -> bool:
+    """将路径与 glob 模式进行匹配。/ Match a path against a glob pattern."""
     normalized = _normalize_pattern(pattern)
     if not normalized:
         return False
@@ -50,6 +63,7 @@ def _match_glob(rel_path: str, name: str, pattern: str) -> bool:
 
 
 def _is_binary(raw: bytes) -> bool:
+    """检查内容是否为二进制文件。/ Check if content is binary file."""
     if b"\x00" in raw:
         return True
     sample = raw[:4096]
@@ -60,6 +74,7 @@ def _is_binary(raw: bytes) -> bool:
 
 
 def _paginate(items: list[T], limit: int | None, offset: int) -> tuple[list[T], bool]:
+    """对列表进行分页。/ Paginate a list of items."""
     if limit is None:
         return items[offset:], False
     sliced = items[offset : offset + limit]
@@ -68,6 +83,7 @@ def _paginate(items: list[T], limit: int | None, offset: int) -> tuple[list[T], 
 
 
 def _pagination_note(limit: int | None, offset: int, truncated: bool) -> str | None:
+    """生成分页说明。/ Generate pagination note."""
     if truncated:
         if limit is None:
             return f"(pagination: offset={offset})"
@@ -78,6 +94,7 @@ def _pagination_note(limit: int | None, offset: int, truncated: bool) -> str | N
 
 
 def _matches_type(name: str, file_type: str | None) -> bool:
+    """检查文件名是否匹配文件类型。/ Check if filename matches file type."""
     if not file_type:
         return True
     lowered = file_type.strip().lower()
@@ -149,10 +166,12 @@ class GlobTool(_SearchTool):
 
     @property
     def read_only(self) -> bool:
+        """标记为只读工具。/ Mark as read-only tool."""
         return True
 
     @property
     def parameters(self) -> dict[str, Any]:
+        """工具参数模式。/ Tool parameters schema."""
         return {
             "type": "object",
             "properties": {
@@ -202,6 +221,19 @@ class GlobTool(_SearchTool):
         entry_type: str = "files",
         **kwargs: Any,
     ) -> str:
+        """执行 glob 搜索。
+
+        Args:
+            pattern: Glob 模式，例如 '*.py' 或 'tests/**/test_*.py'。/ Glob pattern, e.g. '*.py' or 'tests/**/test_*.py'.
+            path: 搜索起始目录（默认 '.'）。/ Directory to search from (default '.').
+            max_results: 返回结果的最大数量（旧版别名，优先使用 head_limit）。/ Maximum number of results to return (legacy alias, prefer head_limit).
+            head_limit: 返回匹配项的最大数量（默认 250）。/ Maximum number of matches to return (default 250).
+            offset: 在返回结果前跳过的匹配项数量。/ Number of matching entries to skip before returning results.
+            entry_type: 匹配类型：'files'（文件）、'dirs'（目录）或 'both'（两者）。/ Entry type: 'files', 'dirs', or 'both'.
+
+        Returns:
+            匹配的文件路径列表（按修改时间排序，最新的在前），或错误消息。/ List of matching file paths (sorted by modification time, newest first), or error message.
+        """
         try:
             root = self._resolve(path or ".")
             if not root.exists():
@@ -251,12 +283,13 @@ class GlobTool(_SearchTool):
 
 
 class GrepTool(_SearchTool):
-    """Search file contents using a regex-like pattern."""
+    """使用类正则表达式模式搜索文件内容。/ Search file contents using a regex-like pattern."""
     _MAX_RESULT_CHARS = 128_000
     _MAX_FILE_BYTES = 2_000_000
 
     @property
     def name(self) -> str:
+        """工具名称：grep。/ Tool name: grep."""
         return "grep"
 
     @property
@@ -270,10 +303,12 @@ class GrepTool(_SearchTool):
 
     @property
     def read_only(self) -> bool:
+        """标记为只读工具。/ Mark as read-only tool."""
         return True
 
     @property
     def parameters(self) -> dict[str, Any]:
+        """工具参数模式。/ Tool parameters schema."""
         return {
             "type": "object",
             "properties": {
@@ -368,6 +403,7 @@ class GrepTool(_SearchTool):
         before: int,
         after: int,
     ) -> str:
+        """格式化匹配块及其上下文。/ Format match block with context."""
         start = max(1, match_line - before)
         end = min(len(lines), match_line + after)
         block = [f"{display_path}:{match_line}"]
@@ -393,6 +429,26 @@ class GrepTool(_SearchTool):
         offset: int = 0,
         **kwargs: Any,
     ) -> str:
+        """执行 grep 搜索。/ Execute grep search.
+
+        Args:
+            pattern: 要搜索的正则表达式或纯文本模式。/ Regex or plain text pattern to search for.
+            path: 要搜索的文件或目录路径（默认 '.'）。/ File or directory path to search in (default '.').
+            glob: 可选的文件通配符过滤，如 '*.py' 或 'tests/**/test_*.py'。/ Optional file glob filter, e.g. '*.py' or 'tests/**/test_*.py'.
+            type: 可选的文件类型简写，如 'py', 'ts', 'md', 'json'。/ Optional file type shorthand, e.g. 'py', 'ts', 'md', 'json'.
+            case_insensitive: 是否区分大小写（默认 false）。/ Case-insensitive search (default false).
+            fixed_strings: 是否将模式当作纯文本而非正则表达式（默认 false）。/ Treat pattern as plain text instead of regex (default false).
+            output_mode: 输出模式：content（带上下文的匹配行）、files_with_matches（仅文件路径）、count（每文件匹配行数）。/ Output mode: content (matching lines with context), files_with_matches (file paths only), count (match counts per file).
+            context_before: 每个匹配行前面显示的上下文行数。/ Number of context lines before each match.
+            context_after: 每个匹配行后面显示的上下文行数。/ Number of context lines after each match.
+            max_matches: 已过时，使用 head_limit 代替。内容模式下的最大匹配数。/ Deprecated, use head_limit instead. Max matches in content mode.
+            max_results: 已过时，使用 head_limit 代替。非内容模式下的最大结果数。/ Deprecated, use head_limit instead. Max results in non-content modes.
+            head_limit: 返回的最大结果数。在 content 模式下限制匹配行块数，在其他模式下限制文件条目数（默认 250）。/ Maximum results to return. Limits matching line blocks in content mode, file entries in other modes (default 250).
+            offset: 在应用 head_limit 之前跳过的结果数。/ Number of results to skip before applying head_limit.
+
+        Returns:
+            格式化后的搜索结果。/ Formatted search results.
+        """
         try:
             target = self._resolve(path or ".")
             if not target.exists():

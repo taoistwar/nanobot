@@ -1,12 +1,19 @@
 """JSON Schema fragment types: all subclass :class:`~nanobot.agent.tools.base.Schema` for descriptions and constraints on tool parameters.
 
+JSON Schema 片段类型：所有类型都继承自 :class:`~nanobot.agent.tools.base.Schema`，用于工具参数的描述和约束。
+
 - ``to_json_schema()``: returns a dict compatible with :meth:`~nanobot.agent.tools.base.Schema.validate_json_schema_value` /
   :class:`~nanobot.agent.tools.base.Tool`.
+  返回与 :meth:`~nanobot.agent.tools.base.Schema.validate_json_schema_value` /
+  :class:`~nanobot.agent.tools.base.Tool` 兼容的字典。
 - ``validate_value(value, path)``: validates a single value against this schema; returns a list of error messages (empty means valid).
+  根据此模式验证单个值；返回错误消息列表（空表示有效）。
 
 Shared validation and fragment normalization are on the class methods of :class:`~nanobot.agent.tools.base.Schema`.
+共享验证和片段规范化在 :class:`~nanobot.agent.tools.base.Schema` 的类方法上。
 
 Note: Python does not allow subclassing ``bool``, so booleans use :class:`BooleanSchema`.
+注意：Python 不允许继承 ``bool``，因此布尔值使用 :class:`BooleanSchema`。
 """
 
 from __future__ import annotations
@@ -18,7 +25,10 @@ from nanobot.agent.tools.base import Schema
 
 
 class StringSchema(Schema):
-    """String parameter: ``description`` documents the field; optional length bounds and enum."""
+    """String parameter: ``description`` documents the field; optional length bounds and enum.
+    
+    字符串参数：`description` 记录字段；可选长度边界和枚举。
+    """
 
     def __init__(
         self,
@@ -29,6 +39,17 @@ class StringSchema(Schema):
         enum: tuple[Any, ...] | list[Any] | None = None,
         nullable: bool = False,
     ) -> None:
+        """Initialize string schema.
+        
+        初始化字符串模式。
+        
+        Args:
+            description: Field description / 字段描述
+            min_length: Minimum length / 最小长度
+            max_length: Maximum length / 最大长度
+            enum: Allowed values / 允许的值
+            nullable: Whether nullable / 是否可为空
+        """
         self._description = description
         self._min_length = min_length
         self._max_length = max_length
@@ -36,6 +57,13 @@ class StringSchema(Schema):
         self._nullable = nullable
 
     def to_json_schema(self) -> dict[str, Any]:
+        """Convert to JSON schema dict.
+        
+        转换为 JSON 模式字典。
+        
+        Returns:
+            JSON schema dict / JSON 模式字典
+        """
         t: Any = "string"
         if self._nullable:
             t = ["string", "null"]
@@ -52,7 +80,10 @@ class StringSchema(Schema):
 
 
 class IntegerSchema(Schema):
-    """Integer parameter: optional placeholder int (legacy ctor signature), description, and bounds."""
+    """Integer parameter: optional placeholder int (legacy ctor signature), description, and bounds.
+    
+    整数参数：可选占位符 int（旧版构造函数签名）、描述和边界。
+    """
 
     def __init__(
         self,
@@ -64,6 +95,18 @@ class IntegerSchema(Schema):
         enum: tuple[int, ...] | list[int] | None = None,
         nullable: bool = False,
     ) -> None:
+        """Initialize integer schema.
+        
+        初始化整数模式。
+        
+        Args:
+            value: Placeholder value (legacy) / 占位符值（旧版）
+            description: Field description / 字段描述
+            minimum: Minimum value / 最小值
+            maximum: Maximum value / 最大值
+            enum: Allowed values / 允许的值
+            nullable: Whether nullable / 是否可为空
+        """
         self._value = value
         self._description = description
         self._minimum = minimum
@@ -72,6 +115,13 @@ class IntegerSchema(Schema):
         self._nullable = nullable
 
     def to_json_schema(self) -> dict[str, Any]:
+        """Convert to JSON schema dict.
+        
+        转换为 JSON 模式字典。
+        
+        Returns:
+            JSON schema dict / JSON 模式字典
+        """
         t: Any = "integer"
         if self._nullable:
             t = ["integer", "null"]
@@ -88,7 +138,10 @@ class IntegerSchema(Schema):
 
 
 class NumberSchema(Schema):
-    """Numeric parameter (JSON number): description and optional bounds."""
+    """Numeric parameter (JSON number): description and optional bounds.
+    
+    数字参数（JSON number）：描述和可选边界。
+    """
 
     def __init__(
         self,
@@ -100,6 +153,18 @@ class NumberSchema(Schema):
         enum: tuple[float, ...] | list[float] | None = None,
         nullable: bool = False,
     ) -> None:
+        """Initialize number schema.
+        
+        初始化数字模式。
+        
+        Args:
+            value: Placeholder value (legacy) / 占位符值（旧版）
+            description: Field description / 字段描述
+            minimum: Minimum value / 最小值
+            maximum: Maximum value / 最大值
+            enum: Allowed values / 允许的值
+            nullable: Whether nullable / 是否可为空
+        """
         self._value = value
         self._description = description
         self._minimum = minimum
@@ -108,6 +173,13 @@ class NumberSchema(Schema):
         self._nullable = nullable
 
     def to_json_schema(self) -> dict[str, Any]:
+        """Convert to JSON schema dict.
+        
+        转换为 JSON 模式字典。
+        
+        Returns:
+            JSON schema dict / JSON 模式字典
+        """
         t: Any = "number"
         if self._nullable:
             t = ["number", "null"]
@@ -124,7 +196,10 @@ class NumberSchema(Schema):
 
 
 class BooleanSchema(Schema):
-    """Boolean parameter (standalone class because Python forbids subclassing ``bool``)."""
+    """Boolean parameter (standalone class because Python forbids subclassing ``bool``).
+    
+    布尔参数（独立类，因为 Python 禁止继承 ``bool``）。
+    """
 
     def __init__(
         self,
@@ -133,11 +208,27 @@ class BooleanSchema(Schema):
         default: bool | None = None,
         nullable: bool = False,
     ) -> None:
+        """Initialize boolean schema.
+        
+        初始化布尔模式。
+        
+        Args:
+            description: Field description / 字段描述
+            default: Default value / 默认值
+            nullable: Whether nullable / 是否可为空
+        """
         self._description = description
         self._default = default
         self._nullable = nullable
 
     def to_json_schema(self) -> dict[str, Any]:
+        """Convert to JSON schema dict.
+        
+        转换为 JSON 模式字典。
+        
+        Returns:
+            JSON schema dict / JSON 模式字典
+        """
         t: Any = "boolean"
         if self._nullable:
             t = ["boolean", "null"]
@@ -150,7 +241,10 @@ class BooleanSchema(Schema):
 
 
 class ArraySchema(Schema):
-    """Array parameter: element schema is given by ``items``."""
+    """Array parameter: element schema is given by ``items``.
+    
+    数组参数：元素模式由 `items` 给出。
+    """
 
     def __init__(
         self,
@@ -161,6 +255,17 @@ class ArraySchema(Schema):
         max_items: int | None = None,
         nullable: bool = False,
     ) -> None:
+        """Initialize array schema.
+        
+        初始化数组模式。
+        
+        Args:
+            items: Item schema / 项模式
+            description: Field description / 字段描述
+            min_items: Minimum items / 最小项数
+            max_items: Maximum items / 最大项数
+            nullable: Whether nullable / 是否可为空
+        """
         self._items_schema: Any = items if items is not None else StringSchema("")
         self._description = description
         self._min_items = min_items
@@ -168,6 +273,13 @@ class ArraySchema(Schema):
         self._nullable = nullable
 
     def to_json_schema(self) -> dict[str, Any]:
+        """Convert to JSON schema dict.
+        
+        转换为 JSON 模式字典。
+        
+        Returns:
+            JSON schema dict / JSON 模式字典
+        """
         t: Any = "array"
         if self._nullable:
             t = ["array", "null"]
@@ -185,7 +297,10 @@ class ArraySchema(Schema):
 
 
 class ObjectSchema(Schema):
-    """Object parameter: ``properties`` or keyword args are field names; values are child Schema or JSON Schema dicts."""
+    """Object parameter: ``properties`` or keyword args are field names; values are child Schema or JSON Schema dicts.
+    
+    对象参数：`properties` 或关键字参数是字段名；值是子 Schema 或 JSON Schema 字典。
+    """
 
     def __init__(
         self,
@@ -197,6 +312,18 @@ class ObjectSchema(Schema):
         nullable: bool = False,
         **kwargs: Any,
     ) -> None:
+        """Initialize object schema.
+        
+        初始化对象模式。
+        
+        Args:
+            properties: Properties dict / 属性字典
+            required: Required fields / 必填字段
+            description: Field description / 字段描述
+            additional_properties: Additional properties policy / 额外属性策略
+            nullable: Whether nullable / 是否可为空
+            **kwargs: Additional properties / 额外属性
+        """
         self._properties = dict(properties or {}, **kwargs)
         self._required = list(required or [])
         self._root_description = description
@@ -204,6 +331,13 @@ class ObjectSchema(Schema):
         self._nullable = nullable
 
     def to_json_schema(self) -> dict[str, Any]:
+        """Convert to JSON schema dict.
+        
+        转换为 JSON 模式字典。
+        
+        Returns:
+            JSON schema dict / JSON 模式字典
+        """
         t: Any = "object"
         if self._nullable:
             t = ["object", "null"]
@@ -224,7 +358,18 @@ def tool_parameters_schema(
     description: str = "",
     **properties: Any,
 ) -> dict[str, Any]:
-    """Build root tool parameters ``{"type": "object", "properties": ...}`` for :meth:`Tool.parameters`."""
+    """Build root tool parameters ``{"type": "object", "properties": ...}`` for :meth:`Tool.parameters`.
+    
+    为 :meth:`Tool.parameters` 构建根工具参数 `{"type": "object", "properties": ...}`。
+    
+    Args:
+        required: Required fields / 必填字段
+        description: Tool description / 工具描述
+        **properties: Tool properties / 工具属性
+        
+    Returns:
+        Tool parameters schema / 工具参数模式
+    """
     return ObjectSchema(
         required=required,
         description=description,
