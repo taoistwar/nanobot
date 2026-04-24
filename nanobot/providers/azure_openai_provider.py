@@ -1,8 +1,12 @@
 """Azure OpenAI provider using the OpenAI SDK Responses API.
+# 使用 OpenAI SDK Responses API 的 Azure OpenAI 提供者
 
 Uses ``AsyncOpenAI`` pointed at ``https://{endpoint}/openai/v1/`` which
+# 使用指向 ``https://{endpoint}/openai/v1/`` 的 ``AsyncOpenAI``，
 routes to the Responses API (``/responses``).  Reuses shared conversion
+# 该地址路由到 Responses API（/responses）。重用来自
 helpers from :mod:`nanobot.providers.openai_responses`.
+# :mod:`nanobot.providers.openai_responses` 的共享转换辅助函数
 """
 
 from __future__ import annotations
@@ -24,12 +28,17 @@ from nanobot.providers.openai_responses import (
 
 class AzureOpenAIProvider(LLMProvider):
     """Azure OpenAI provider backed by the Responses API.
+    # 由 Responses API 支持的 Azure OpenAI 提供者
 
     Features:
+    # 特性：
     - Uses the OpenAI Python SDK (``AsyncOpenAI``) with
+    # 使用 OpenAI Python SDK（``AsyncOpenAI``），配置
       ``base_url = {endpoint}/openai/v1/``
     - Calls ``client.responses.create()`` (Responses API)
+    # 调用 ``client.responses.create()``（Responses API）
     - Reuses shared message/tool/SSE conversion from
+    # 重用来自 ``openai_responses`` 的共享消息/工具/SSE 转换
       ``openai_responses``
     """
 
@@ -64,6 +73,7 @@ class AzureOpenAIProvider(LLMProvider):
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+    # 辅助函数
 
     @staticmethod
     def _supports_temperature(
@@ -126,6 +136,7 @@ class AzureOpenAIProvider(LLMProvider):
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
+    # 公共 API
 
     async def chat(
         self,

@@ -1,4 +1,6 @@
-"""Email channel implementation using IMAP polling + SMTP replies."""
+"""Email channel implementation using IMAP polling + SMTP replies.
+使用 IMAP 轮询 + SMTP 回复的电子邮件频道实现。
+"""
 
 import asyncio
 import html
@@ -28,7 +30,8 @@ from nanobot.utils.helpers import safe_filename
 
 
 class EmailConfig(Base):
-    """Email channel configuration (IMAP inbound + SMTP outbound)."""
+    """Email channel configuration (IMAP inbound + SMTP outbound).
+    电子邮件频道配置（IMAP 入站 + SMTP 出站）。"""
 
     enabled: bool = False
     consent_granted: bool = False
@@ -56,25 +59,34 @@ class EmailConfig(Base):
     allow_from: list[str] = Field(default_factory=list)
 
     # Email authentication verification (anti-spoofing)
+    # 电子邮件身份验证（反欺骗）
     verify_dkim: bool = True   # Require Authentication-Results with dkim=pass
+    # 需要 Authentication-Results 中有 dkim=pass
     verify_spf: bool = True    # Require Authentication-Results with spf=pass
+    # 需要 Authentication-Results 中有 spf=pass
 
     # Attachment handling — set allowed types to enable (e.g. ["application/pdf", "image/*"], or ["*"] for all)
+    # 附件处理 — 设置允许的类型以启用（例如 ["application/pdf", "image/*"]，或 ["*"] 表示全部）
     allowed_attachment_types: list[str] = Field(default_factory=list)
     max_attachment_size: int = 2_000_000  # 2MB per attachment
+    # 每个附件 2MB
     max_attachments_per_email: int = 5
 
 
 class EmailChannel(BaseChannel):
     """
     Email channel.
+    电子邮件频道。
 
     Inbound:
     - Poll IMAP mailbox for unread messages.
+      轮询 IMAP 邮箱中的未读消息。
     - Convert each message into an inbound event.
+      将每条消息转换为入站事件。
 
     Outbound:
     - Send responses via SMTP back to the sender address.
+      通过 SMTP 将响应发送回发件人地址。
     """
 
     name = "email"
@@ -122,10 +134,12 @@ class EmailChannel(BaseChannel):
         self._last_subject_by_chat: dict[str, str] = {}
         self._last_message_id_by_chat: dict[str, str] = {}
         self._processed_uids: set[str] = set()  # Capped to prevent unbounded growth
+        # 上限以防止无限增长
         self._MAX_PROCESSED_UIDS = 100000
 
     async def start(self) -> None:
-        """Start polling IMAP for inbound emails."""
+        """Start polling IMAP for inbound emails.
+        开始轮询 IMAP 获取入站电子邮件。"""
         if not self.config.consent_granted:
             logger.warning(
                 "Email channel disabled: consent_granted is false. "
@@ -172,11 +186,13 @@ class EmailChannel(BaseChannel):
             await asyncio.sleep(poll_seconds)
 
     async def stop(self) -> None:
-        """Stop polling loop."""
+        """Stop polling loop.
+        停止轮询循环。"""
         self._running = False
 
     async def send(self, msg: OutboundMessage) -> None:
-        """Send email via SMTP."""
+        """Send email via SMTP.
+        通过 SMTP 发送电子邮件。"""
         if not self.config.consent_granted:
             logger.warning("Skip email send: consent_granted is false")
             return
@@ -191,10 +207,12 @@ class EmailChannel(BaseChannel):
             return
 
         # Determine if this is a reply (recipient has sent us an email before)
+        # 确定这是否是回复（收件人之前给我们发过电子邮件）
         is_reply = to_addr in self._last_subject_by_chat
         force_send = bool((msg.metadata or {}).get("force_send"))
 
         # autoReplyEnabled only controls automatic replies, not proactive sends
+        # autoReplyEnabled 仅控制自动回复，不控制主动发送
         if is_reply and not self.config.auto_reply_enabled and not force_send:
             logger.info("Skip automatic email reply to {}: auto_reply_enabled is false", to_addr)
             return
@@ -224,6 +242,8 @@ class EmailChannel(BaseChannel):
             raise
 
     def _validate_config(self) -> bool:
+        """Validate that all required configuration fields are present.
+        验证所有必需的配置字段是否存在。"""
         missing = []
         if not self.config.imap_host:
             missing.append("imap_host")
@@ -244,6 +264,8 @@ class EmailChannel(BaseChannel):
         return True
 
     def _smtp_send(self, msg: EmailMessage) -> None:
+        """Send email message via SMTP.
+        通过 SMTP 发送电子邮件消息。"""
         timeout = 30
         if self.config.smtp_use_ssl:
             with smtplib.SMTP_SSL(
@@ -262,7 +284,8 @@ class EmailChannel(BaseChannel):
             smtp.send_message(msg)
 
     def _fetch_new_messages(self) -> list[dict[str, Any]]:
-        """Poll IMAP and return parsed unread messages."""
+        """Poll IMAP and return parsed unread messages.
+        轮询 IMAP 并返回解析后的未读消息。"""
         return self._fetch_messages(
             search_criteria=("UNSEEN",),
             mark_seen=self.config.mark_seen,
@@ -278,8 +301,10 @@ class EmailChannel(BaseChannel):
     ) -> list[dict[str, Any]]:
         """
         Fetch messages in [start_date, end_date) by IMAP date search.
+        通过 IMAP 日期搜索获取 [start_date, end_date) 范围内的消息。
 
         This is used for historical summarization tasks (e.g. "yesterday").
+        这用于历史摘要任务（例如"昨天"）。
         """
         if end_date <= start_date:
             return []
@@ -303,6 +328,8 @@ class EmailChannel(BaseChannel):
         dedupe: bool,
         limit: int,
     ) -> list[dict[str, Any]]:
+        """Fetch messages with retry logic for stale connections.
+        使用 stale 连接重试逻辑获取消息。"""
         messages: list[dict[str, Any]] = []
         cycle_uids: set[str] = set()
 
@@ -333,7 +360,8 @@ class EmailChannel(BaseChannel):
         messages: list[dict[str, Any]],
         cycle_uids: set[str],
     ) -> None:
-        """Fetch messages by arbitrary IMAP search criteria."""
+        """Fetch messages by arbitrary IMAP search criteria.
+        通过任意 IMAP 搜索条件获取消息。"""
         mailbox = self.config.imap_mailbox or "INBOX"
 
         if self.config.imap_use_ssl:
@@ -388,6 +416,7 @@ class EmailChannel(BaseChannel):
                     continue
 
                 # --- Anti-spoofing: verify Authentication-Results ---
+                # --- 反欺骗：验证 Authentication-Results ---
                 spf_pass, dkim_pass = self._check_authentication_results(parsed)
                 if self.config.verify_spf and not spf_pass:
                     logger.warning(
@@ -424,6 +453,7 @@ class EmailChannel(BaseChannel):
                 )
 
                 # --- Attachment extraction ---
+                # --- 附件提取 ---
                 attachment_paths: list[str] = []
                 if self.config.allowed_attachment_types:
                     saved = self._extract_attachments(
@@ -466,7 +496,8 @@ class EmailChannel(BaseChannel):
                 pass
 
     def _collect_self_addresses(self) -> set[str]:
-        """Return normalized email addresses owned by this channel instance."""
+        """Return normalized email addresses owned by this channel instance.
+        返回此频道实例拥有的规范化电子邮件地址。"""
         candidates = (
             self.config.from_address,
             self.config.smtp_username,
@@ -481,7 +512,8 @@ class EmailChannel(BaseChannel):
 
     @staticmethod
     def _normalize_address(value: str) -> str:
-        """Normalize an address or mailbox-like identifier for comparisons."""
+        """Normalize an address or mailbox-like identifier for comparisons.
+        规范化地址或类邮箱标识符以便比较。"""
         raw = (value or "").strip()
         if not raw:
             return ""
@@ -493,40 +525,51 @@ class EmailChannel(BaseChannel):
         return ""
 
     def _is_self_address(self, sender: str) -> bool:
-        """Return True when an inbound sender belongs to the bot itself."""
+        """Return True when an inbound sender belongs to the bot itself.
+        当入站发件人属于机器人本身时返回 True。"""
         normalized_sender = self._normalize_address(sender)
         return bool(normalized_sender) and normalized_sender in self._self_addresses
 
     def _remember_processed_uid(self, uid: str, dedupe: bool, cycle_uids: set[str]) -> None:
-        """Track a fetched UID so skipped messages are not reprocessed forever."""
+        """Track a fetched UID so skipped messages are not reprocessed forever.
+        跟踪已获取的 UID，使跳过的消息不会被永久重新处理。"""
         if not uid:
             return
         cycle_uids.add(uid)
         if dedupe:
             self._processed_uids.add(uid)
             # mark_seen is the primary dedup; this set is a safety net
+            # mark_seen 是主要的去重；此集合是安全网
             if len(self._processed_uids) > self._MAX_PROCESSED_UIDS:
                 # Evict a random half to cap memory; mark_seen is the primary dedup
+                # 驱逐随机一半以限制内存；mark_seen 是主要的去重
                 self._processed_uids = set(list(self._processed_uids)[len(self._processed_uids) // 2:])
 
     @classmethod
     def _is_stale_imap_error(cls, exc: Exception) -> bool:
+        """Check if exception indicates a stale IMAP connection.
+        检查异常是否表示 IMAP 连接已过时。"""
         message = str(exc).lower()
         return any(marker in message for marker in cls._IMAP_RECONNECT_MARKERS)
 
     @classmethod
     def _is_missing_mailbox_error(cls, exc: Exception) -> bool:
+        """Check if exception indicates a missing mailbox.
+        检查异常是否表示邮箱不存在。"""
         message = str(exc).lower()
         return any(marker in message for marker in cls._IMAP_MISSING_MAILBOX_MARKERS)
 
     @classmethod
     def _format_imap_date(cls, value: date) -> str:
-        """Format date for IMAP search (always English month abbreviations)."""
+        """Format date for IMAP search (always English month abbreviations).
+        为 IMAP 搜索格式化日期（始终使用英文月份缩写）。"""
         month = cls._IMAP_MONTHS[value.month - 1]
         return f"{value.day:02d}-{month}-{value.year}"
 
     @staticmethod
     def _extract_message_bytes(fetched: list[Any]) -> bytes | None:
+        """Extract raw message bytes from IMAP fetch response.
+        从 IMAP 获取响应中提取原始消息字节。"""
         for item in fetched:
             if isinstance(item, tuple) and len(item) >= 2 and isinstance(item[1], (bytes, bytearray)):
                 return bytes(item[1])
@@ -534,6 +577,8 @@ class EmailChannel(BaseChannel):
 
     @staticmethod
     def _extract_uid(fetched: list[Any]) -> str:
+        """Extract UID from IMAP fetch response.
+        从 IMAP 获取响应中提取 UID。"""
         for item in fetched:
             if isinstance(item, tuple) and item and isinstance(item[0], (bytes, bytearray)):
                 head = bytes(item[0]).decode("utf-8", errors="ignore")
@@ -544,6 +589,8 @@ class EmailChannel(BaseChannel):
 
     @staticmethod
     def _decode_header_value(value: str) -> str:
+        """Decode email header value (e.g. Subject).
+        解码电子邮件头值（例如 Subject）。"""
         if not value:
             return ""
         try:
@@ -553,7 +600,8 @@ class EmailChannel(BaseChannel):
 
     @classmethod
     def _extract_text_body(cls, msg: Any) -> str:
-        """Best-effort extraction of readable body text."""
+        """Best-effort extraction of readable body text.
+        尽最大努力提取可读正文文本。"""
         if msg.is_multipart():
             plain_parts: list[str] = []
             html_parts: list[str] = []
@@ -594,9 +642,11 @@ class EmailChannel(BaseChannel):
     @staticmethod
     def _check_authentication_results(parsed_msg: Any) -> tuple[bool, bool]:
         """Parse Authentication-Results headers for SPF and DKIM verdicts.
+        解析 Authentication-Results 头以获取 SPF 和 DKIM 裁定。
 
         Returns:
             A tuple of (spf_pass, dkim_pass) booleans.
+            (spf_pass, dkim_pass) 布尔元组。
         """
         spf_pass = False
         dkim_pass = False
@@ -619,8 +669,10 @@ class EmailChannel(BaseChannel):
         max_count: int,
     ) -> list[Path]:
         """Extract and save email attachments to the media directory.
+        将电子邮件附件提取并保存到媒体目录。
 
         Returns list of saved file paths.
+        返回保存的文件路径列表。
         """
         if not msg.is_multipart():
             return []
@@ -665,12 +717,16 @@ class EmailChannel(BaseChannel):
 
     @staticmethod
     def _html_to_text(raw_html: str) -> str:
+        """Convert HTML to plain text.
+        将 HTML 转换为纯文本。"""
         text = re.sub(r"<\s*br\s*/?>", "\n", raw_html, flags=re.IGNORECASE)
         text = re.sub(r"<\s*/\s*p\s*>", "\n", text, flags=re.IGNORECASE)
         text = re.sub(r"<[^>]+>", "", text)
         return html.unescape(text)
 
     def _reply_subject(self, base_subject: str) -> str:
+        """Generate reply subject with prefix.
+        生成带前缀的回复主题。"""
         subject = (base_subject or "").strip() or "nanobot reply"
         prefix = self.config.subject_prefix or "Re: "
         if subject.lower().startswith("re:"):

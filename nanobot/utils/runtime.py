@@ -1,4 +1,4 @@
-"""Runtime-specific helper functions and constants."""
+"""运行时特定的辅助函数和常量模块。"""
 
 from __future__ import annotations
 
@@ -26,12 +26,12 @@ LENGTH_RECOVERY_PROMPT = (
 
 
 def empty_tool_result_message(tool_name: str) -> str:
-    """Short prompt-safe marker for tools that completed without visible output."""
+    """为没有可见输出的工具返回简短的提示安全标记。"""
     return f"({tool_name} completed with no output)"
 
 
 def ensure_nonempty_tool_result(tool_name: str, content: Any) -> Any:
-    """Replace semantically empty tool results with a short marker string."""
+    """将语义为空的工具结果替换为简短的标记字符串。"""
     if content is None:
         return empty_tool_result_message(tool_name)
     if isinstance(content, str) and not content.strip():
@@ -46,22 +46,22 @@ def ensure_nonempty_tool_result(tool_name: str, content: Any) -> Any:
 
 
 def is_blank_text(content: str | None) -> bool:
-    """True when *content* is missing or only whitespace."""
+    """当 *content* 为空或仅包含空白字符时返回 True。"""
     return content is None or not content.strip()
 
 
 def build_finalization_retry_message() -> dict[str, str]:
-    """A short no-tools-allowed prompt for final answer recovery."""
+    """用于最终答案恢复的简短无工具提示。"""
     return {"role": "user", "content": FINALIZATION_RETRY_PROMPT}
 
 
 def build_length_recovery_message() -> dict[str, str]:
-    """Prompt the model to continue after hitting output token limit."""
+    """在达到输出 token 限制后提示模型继续。"""
     return {"role": "user", "content": LENGTH_RECOVERY_PROMPT}
 
 
 def external_lookup_signature(tool_name: str, arguments: dict[str, Any]) -> str | None:
-    """Stable signature for repeated external lookups we want to throttle."""
+    """为需要限流的重复外部查找生成的稳定签名。"""
     if tool_name == "web_fetch":
         url = str(arguments.get("url") or "").strip()
         if url:
@@ -78,7 +78,7 @@ def repeated_external_lookup_error(
     arguments: dict[str, Any],
     seen_counts: dict[str, int],
 ) -> str | None:
-    """Block repeated external lookups after a small retry budget."""
+    """在少量重试预算用完后阻止重复的外部查找。"""
     signature = external_lookup_signature(tool_name, arguments)
     if signature is None:
         return None

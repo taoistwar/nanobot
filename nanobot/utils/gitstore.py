@@ -1,4 +1,4 @@
-"""Git-backed version control for memory files, using dulwich."""
+"""使用 dulwich 库实现的 Git 备份版本控制系统，用于管理内存文件。"""
 
 from __future__ import annotations
 
@@ -13,12 +13,12 @@ from loguru import logger
 
 @dataclass
 class CommitInfo:
-    sha: str  # Short SHA (8 chars)
-    message: str
-    timestamp: str  # Formatted datetime
+    sha: str  # 短 SHA（8 个字符）
+    message: str  # 提交消息
+    timestamp: str  # 格式化的日期时间
 
     def format(self, diff: str = "") -> str:
-        """Format this commit for display, optionally with a diff."""
+        """格式化提交信息用于显示，可选择包含 diff。"""
         header = f"## {self.message.splitlines()[0]}\n`{self.sha}` — {self.timestamp}\n"
         if diff:
             return f"{header}\n```diff\n{diff}\n```"
@@ -27,13 +27,13 @@ class CommitInfo:
 
 @dataclass
 class LineAge:
-    """Age of a single line based on git blame."""
+    """基于 git blame 的单行年龄信息。"""
 
-    age_days: int  # days since last modification
+    age_days: int  # 距离上次修改的天数
 
 
 def _compute_line_ages(annotated) -> list[LineAge]:
-    """Convert annotate results to per-line ages."""
+    """将注释结果转换为每行的年龄信息。"""
     now = datetime.now(tz=timezone.utc).date()
     ages: list[LineAge] = []
     for (commit, _tree_entry), _line_bytes in annotated:
@@ -43,23 +43,23 @@ def _compute_line_ages(annotated) -> list[LineAge]:
 
 
 class GitStore:
-    """Git-backed version control for memory files."""
+    """Git 备份的内存文件版本控制系统。"""
 
     def __init__(self, workspace: Path, tracked_files: list[str]):
         self._workspace = workspace
         self._tracked_files = tracked_files
 
     def is_initialized(self) -> bool:
-        """Check if the git repo has been initialized."""
+        """检查 git 仓库是否已初始化。"""
         return (self._workspace / ".git").is_dir()
 
     # -- init ------------------------------------------------------------------
 
     def init(self) -> bool:
-        """Initialize a git repo if not already initialized.
+        """初始化 git 仓库（如尚未初始化）。
 
-        Creates .gitignore and makes an initial commit.
-        Returns True if a new repo was created, False if already exists.
+        创建 .gitignore 并进行初始提交。
+        如果创建了新仓库则返回 True，已存在则返回 False。
         """
         if self.is_initialized():
             return False
@@ -119,9 +119,9 @@ class GitStore:
     # -- daily operations ------------------------------------------------------
 
     def auto_commit(self, message: str) -> str | None:
-        """Stage tracked memory files and commit if there are changes.
+        """暂存跟踪的内存文件并在有更改时提交。
 
-        Returns the short commit SHA, or None if nothing to commit.
+        返回短提交 SHA，如果没有需要提交的内容则返回 None。
         """
         if not self.is_initialized():
             return None
@@ -155,7 +155,7 @@ class GitStore:
     # -- internal helpers ------------------------------------------------------
 
     def _resolve_sha(self, short_sha: str) -> bytes | None:
-        """Resolve a short SHA prefix to the full SHA bytes."""
+        """将短 SHA 前缀解析为完整的 SHA 字节。"""
         try:
             from dulwich.repo import Repo
 
@@ -177,13 +177,12 @@ class GitStore:
             return None
 
     def _is_inside_git_repo(self) -> bool:
-        """Check if self._workspace is already inside a git repository.
+        """检查 self._workspace 是否已经在 git 仓库内。
 
-        Walks up from self._workspace to the filesystem root, returning True
-        if any parent directory contains a .git entry.
+        从 self._workspace 向文件系统根目录遍历，如果任何父目录包含 .git 项则返回 True。
 
-        Git worktrees and submodules can use a ``.git`` file instead of a
-        directory, so we must treat either form as "already inside a repo".
+        Git worktrees 和 submodules 可以使用 ``.git`` 文件而不是目录，
+        因此我们必须将两种形式都视为"已在仓库内"。
         """
         current = self._workspace.resolve()
         while current != current.parent:
@@ -193,7 +192,7 @@ class GitStore:
         return False
 
     def _build_gitignore(self) -> str:
-        """Generate .gitignore content from tracked files."""
+        """根据跟踪的文件生成 .gitignore 内容。"""
         dirs: set[str] = set()
         for f in self._tracked_files:
             parent = str(Path(f).parent)
@@ -210,7 +209,7 @@ class GitStore:
     # -- query -----------------------------------------------------------------
 
     def log(self, max_entries: int = 20) -> list[CommitInfo]:
-        """Return simplified commit log."""
+        """返回简化的提交日志。"""
         if not self.is_initialized():
             return []
 
@@ -247,11 +246,10 @@ class GitStore:
             return []
 
     def line_ages(self, file_path: str) -> list[LineAge]:
-        """Compute the age of each line in a tracked file via git blame.
+        """通过 git blame 计算跟踪文件中每行的年龄。
 
-        Returns one LineAge per line, in order.
-        Returns an empty list if the repo is not initialized, the file is
-        empty, or annotation fails.
+        按顺序返回每行一个 LineAge。
+        如果仓库未初始化、文件为空或注释失败，则返回空列表。
         """
 
         if not self.is_initialized():
@@ -275,7 +273,7 @@ class GitStore:
         return _compute_line_ages(annotated)
 
     def diff_commits(self, sha1: str, sha2: str) -> str:
-        """Show diff between two commits."""
+        """显示两个提交之间的差异。"""
         if not self.is_initialized():
             return ""
 
@@ -300,14 +298,14 @@ class GitStore:
             return ""
 
     def find_commit(self, short_sha: str, max_entries: int = 20) -> CommitInfo | None:
-        """Find a commit by short SHA prefix match."""
+        """通过短 SHA 前缀匹配查找提交。"""
         for c in self.log(max_entries=max_entries):
             if c.sha.startswith(short_sha):
                 return c
         return None
 
     def show_commit_diff(self, short_sha: str, max_entries: int = 20) -> tuple[CommitInfo, str] | None:
-        """Find a commit and return it with its diff vs the parent."""
+        """查找提交并返回该提交及其与父提交的差异。"""
         commits = self.log(max_entries=max_entries)
         for i, c in enumerate(commits):
             if c.sha.startswith(short_sha):
@@ -321,12 +319,12 @@ class GitStore:
     # -- restore ---------------------------------------------------------------
 
     def revert(self, commit: str) -> str | None:
-        """Revert (undo) the changes introduced by the given commit.
+        """撤销给定提交引入的更改（回退）。
 
-        Restores all tracked memory files to the state at the commit's parent,
-        then creates a new commit recording the revert.
+        将所有跟踪的内存文件恢复到该提交父提交的状态，
+        然后创建一个记录回退的新提交。
 
-        Returns the new commit SHA, or None on failure.
+        成功则返回新提交 SHA，失败返回 None。
         """
         if not self.is_initialized():
             return None
@@ -372,7 +370,7 @@ class GitStore:
 
     @staticmethod
     def _read_blob_from_tree(repo, tree, filepath: str) -> str | None:
-        """Read a blob's content from a tree object by walking path parts."""
+        """通过遍历路径部分从树对象中读取 blob 的内容。"""
         parts = Path(filepath).parts
         current = tree
         for part in parts:

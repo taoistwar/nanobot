@@ -29,7 +29,8 @@ console = Console()
 
 @dataclass
 class OnboardResult:
-    """Result of an onboarding session."""
+    """Result of an onboarding session.
+    引导会话的结果。"""
 
     config: Config
     should_save: bool
@@ -51,7 +52,8 @@ _BACK_PRESSED = object()  # Sentinel value for back navigation
 
 
 def _get_questionary():
-    """Return questionary or raise a clear error when wizard deps are unavailable."""
+    """Return questionary or raise a clear error when wizard deps are unavailable.
+    返回 questionary 或在向导依赖不可用时抛出清晰错误。"""
     if questionary is None:
         raise RuntimeError(
             "Interactive onboarding requires the optional 'questionary' dependency. "
@@ -64,16 +66,21 @@ def _select_with_back(
     prompt: str, choices: list[str], default: str | None = None
 ) -> str | None | object:
     """Select with Escape/Left arrow support for going back.
+    支持返回功能的选择（Escape/左箭头）。
 
     Args:
-        prompt: The prompt text to display.
-        choices: List of choices to select from. Must not be empty.
+        prompt: The prompt text to display. / 显示的提示文本。
+        choices: List of choices to select from. Must not be empty. / 选择列表，不能为空。
         default: The default choice to pre-select. If not in choices, first item is used.
+                 预选的默认选项。如果不在列表中，则使用第一项。
 
     Returns:
         _BACK_PRESSED sentinel if user pressed Escape or Left arrow
+        用户按 Escape 或左箭头时返回 _BACK_PRESSED 标记
         The selected choice string if user confirmed
+        用户确认时返回选中的选择字符串
         None if user cancelled (Ctrl+C)
+        用户取消时返回 None（Ctrl+C）
     """
     from prompt_toolkit.application import Application
     from prompt_toolkit.key_binding import KeyBindings
@@ -169,14 +176,16 @@ def _select_with_back(
 
 
 class FieldTypeInfo(NamedTuple):
-    """Result of field type introspection."""
+    """Result of field type introspection.
+    字段类型内省的結果。"""
 
     type_name: str
     inner_type: Any
 
 
 def _get_field_type_info(field_info) -> FieldTypeInfo:
-    """Extract field type info from Pydantic field."""
+    """Extract field type info from Pydantic field.
+    从 Pydantic 字段提取字段类型信息。"""
     annotation = field_info.annotation
     if annotation is None:
         return FieldTypeInfo("str", None)
@@ -208,7 +217,8 @@ def _get_field_type_info(field_info) -> FieldTypeInfo:
 
 
 def _get_field_display_name(field_key: str, field_info) -> str:
-    """Get display name for a field."""
+    """Get display name for a field.
+    获取字段的显示名称。"""
     if field_info and field_info.description:
         return field_info.description
     name = field_key
@@ -234,12 +244,14 @@ _SENSITIVE_KEYWORDS = frozenset({"api_key", "token", "secret", "password", "cred
 
 
 def _is_sensitive_field(field_name: str) -> bool:
-    """Check if a field name indicates sensitive content."""
+    """Check if a field name indicates sensitive content.
+    检查字段名是否表示敏感内容。"""
     return any(kw in field_name.lower() for kw in _SENSITIVE_KEYWORDS)
 
 
 def _mask_value(value: str) -> str:
-    """Mask a sensitive value, showing only the last 4 characters."""
+    """Mask a sensitive value, showing only the last 4 characters.
+    遮盖敏感值，只显示最后4个字符。"""
     if len(value) <= 4:
         return "****"
     return "*" * (len(value) - 4) + value[-4:]
@@ -249,7 +261,8 @@ def _mask_value(value: str) -> str:
 
 
 def _format_value(value: Any, rich: bool = True, field_name: str = "") -> str:
-    """Single recursive entry point for safe value display. Handles any depth."""
+    """Single recursive entry point for safe value display. Handles any depth.
+    安全值显示的单一递归入口，可处理任意深度。"""
     if value is None or value == "" or value == {} or value == []:
         return "[dim]not set[/dim]" if rich else "[not set]"
     if _is_sensitive_field(field_name) and isinstance(value, str):
@@ -276,7 +289,8 @@ def _format_value(value: Any, rich: bool = True, field_name: str = "") -> str:
 
 
 def _format_value_for_input(value: Any, field_type: str) -> str:
-    """Format a value for use as input default."""
+    """Format a value for use as input default.
+    格式化值以用作输入默认值。"""
     if value is None or value == "":
         return ""
     if field_type == "list" and isinstance(value, list):
@@ -288,9 +302,12 @@ def _format_value_for_input(value: Any, field_type: str) -> str:
 
 def _validate_field_constraint(value: Any, field_info) -> str | None:
     """Validate a value against Pydantic Field constraints.
+    根据 Pydantic Field 约束验证值。
 
     Returns an error message string if validation fails, None if valid.
+    验证失败返回错误消息字符串，有效则返回 None。
     Uses attribute-based detection to handle Pydantic v2 internal types.
+    使用基于属性的检测来处理 Pydantic v2 内部类型。
     """
     if field_info is None or not hasattr(field_info, "metadata"):
         return None
@@ -320,8 +337,10 @@ def _validate_field_constraint(value: Any, field_info) -> str | None:
 
 def _get_constraint_hint(field_info) -> str:
     """Derive a human-readable constraint hint from field metadata.
+    从字段元数据派生人类可读的约束提示。
 
     Returns a string like "(0-10)" or "(>= 0)" to append to field display names.
+    返回如 "(0-10)" 或 "(>= 0)" 的字符串，附加到字段显示名称。
     """
     if field_info is None or not hasattr(field_info, "metadata"):
         return ""
@@ -347,7 +366,8 @@ def _get_constraint_hint(field_info) -> str:
 
 
 def _show_config_panel(display_name: str, model: BaseModel, fields: list) -> None:
-    """Display current configuration as a rich table."""
+    """Display current configuration as a rich table.
+    将当前配置显示为 rich 表格。"""
     table = Table(show_header=False, box=None, padding=(0, 2))
     table.add_column("Field", style="cyan")
     table.add_column("Value")
@@ -362,7 +382,8 @@ def _show_config_panel(display_name: str, model: BaseModel, fields: list) -> Non
 
 
 def _show_main_menu_header() -> None:
-    """Display the main menu header."""
+    """Display the main menu header.
+    显示主菜单标题。"""
     from nanobot import __logo__, __version__
 
     console.print()
@@ -376,7 +397,8 @@ def _show_main_menu_header() -> None:
 
 
 def _show_section_header(title: str, subtitle: str = "") -> None:
-    """Display a section header."""
+    """Display a section header.
+    显示区域标题。"""
     console.print()
     if subtitle:
         console.print(
@@ -390,7 +412,8 @@ def _show_section_header(title: str, subtitle: str = "") -> None:
 
 
 def _input_bool(display_name: str, current: bool | None) -> bool | None:
-    """Get boolean input via confirm dialog."""
+    """Get boolean input via confirm dialog.
+    通过确认对话框获取布尔输入。"""
     return _get_questionary().confirm(
         display_name,
         default=bool(current) if current is not None else False,
@@ -398,7 +421,8 @@ def _input_bool(display_name: str, current: bool | None) -> bool | None:
 
 
 def _input_text(display_name: str, current: Any, field_type: str, field_info=None) -> Any:
-    """Get text input and parse based on field type."""
+    """Get text input and parse based on field type.
+    获取文本输入并根据字段类型解析。"""
     default = _format_value_for_input(current, field_type)
 
     value = _get_questionary().text(f"{display_name}:", default=default).ask()
@@ -445,7 +469,8 @@ def _input_text(display_name: str, current: Any, field_type: str, field_info=Non
 def _input_with_existing(
     display_name: str, current: Any, field_type: str, field_info=None
 ) -> Any:
-    """Handle input with 'keep existing' option for non-empty values."""
+    """Handle input with 'keep existing' option for non-empty values.
+    处理带有"保留现有值"选项的输入，用于非空值。"""
     has_existing = current is not None and current != "" and current != {} and current != []
 
     if has_existing and not isinstance(current, list):
@@ -464,7 +489,8 @@ def _input_with_existing(
 
 
 def _get_current_provider(model: BaseModel) -> str:
-    """Get the current provider setting from a model (if available)."""
+    """Get the current provider setting from a model (if available).
+    从模型获取当前 provider 设置（如果可用）。"""
     if hasattr(model, "provider"):
         return getattr(model, "provider", "auto") or "auto"
     return "auto"
@@ -474,8 +500,7 @@ def _input_model_with_autocomplete(
     display_name: str, current: Any, provider: str
 ) -> str | None:
     """Get model input with autocomplete suggestions.
-
-    """
+    获取带自动补全建议的模型输入。"""
     from prompt_toolkit.completion import Completer, Completion
 
     default = str(current) if current else ""
@@ -513,7 +538,8 @@ def _input_model_with_autocomplete(
 def _input_context_window_with_recommendation(
     display_name: str, current: Any, model_obj: BaseModel
 ) -> int | None:
-    """Get context window input with option to fetch recommended value."""
+    """Get context window input with option to fetch recommended value.
+    获取上下文窗口输入，可选择获取推荐值。"""
     current_val = current if current else ""
 
     choices = ["Enter new value"]
@@ -569,7 +595,8 @@ def _input_context_window_with_recommendation(
 def _handle_model_field(
     working_model: BaseModel, field_name: str, field_display: str, current_value: Any
 ) -> None:
-    """Handle the 'model' field with autocomplete and context-window auto-fill."""
+    """Handle the 'model' field with autocomplete and context-window auto-fill.
+    处理'model'字段，支持自动补全和上下文窗口自动填充。"""
     provider = _get_current_provider(working_model)
     new_value = _input_model_with_autocomplete(field_display, current_value, provider)
     if new_value is not None and new_value != current_value:
@@ -580,7 +607,8 @@ def _handle_model_field(
 def _handle_context_window_field(
     working_model: BaseModel, field_name: str, field_display: str, current_value: Any
 ) -> None:
-    """Handle context_window_tokens with recommendation lookup."""
+    """Handle context_window_tokens with recommendation lookup.
+    处理 context_window_tokens，支持推荐值查找。"""
     new_value = _input_context_window_with_recommendation(
         field_display, current_value, working_model
     )
@@ -601,9 +629,12 @@ def _configure_pydantic_model(
     skip_fields: set[str] | None = None,
 ) -> BaseModel | None:
     """Configure a Pydantic model interactively.
+    交互式配置 Pydantic 模型。
 
     Returns the updated model only when the user explicitly selects "Done".
+    仅当用户明确选择"完成"时才返回更新的模型。
     Back and cancel actions discard the section draft.
+    返回和取消操作将丢弃该部分草稿。
     """
     skip_fields = skip_fields or set()
     working_model = model.model_copy(deep=True)
@@ -702,11 +733,15 @@ def _configure_pydantic_model(
 
 def _try_auto_fill_context_window(model: BaseModel, new_model_name: str) -> None:
     """Try to auto-fill context_window_tokens if it's at default value.
+    如果 context_window_tokens 为默认值，尝试自动填充。
 
     Note:
         This function imports AgentDefaults from nanobot.config.schema to get
         the default context_window_tokens value. If the schema changes, this
         coupling needs to be updated accordingly.
+    注意：
+        此函数从 nanobot.config.schema 导入 AgentDefaults 以获取默认的 context_window_tokens 值。
+        如果架构发生变化，需要相应地更新此耦合。
     """
     # Check if context_window_tokens field exists
     if not hasattr(model, "context_window_tokens"):
@@ -738,7 +773,8 @@ def _try_auto_fill_context_window(model: BaseModel, new_model_name: str) -> None
 
 @lru_cache(maxsize=1)
 def _get_provider_info() -> dict[str, tuple[str, bool, bool, str]]:
-    """Get provider info from registry (cached)."""
+    """Get provider info from registry (cached).
+    从注册表获取 provider 信息（带缓存）。"""
     from nanobot.providers.registry import PROVIDERS
 
     return {
@@ -754,13 +790,15 @@ def _get_provider_info() -> dict[str, tuple[str, bool, bool, str]]:
 
 
 def _get_provider_names() -> dict[str, str]:
-    """Get provider display names."""
+    """Get provider display names.
+    获取 provider 显示名称。"""
     info = _get_provider_info()
     return {name: data[0] for name, data in info.items() if name}
 
 
 def _configure_provider(config: Config, provider_name: str) -> None:
-    """Configure a single LLM provider."""
+    """Configure a single LLM provider.
+    配置单个 LLM 提供者。"""
     provider_config = getattr(config.providers, provider_name, None)
     if provider_config is None:
         console.print(f"[red]Unknown provider: {provider_name}[/red]")
@@ -782,7 +820,8 @@ def _configure_provider(config: Config, provider_name: str) -> None:
 
 
 def _configure_providers(config: Config) -> None:
-    """Configure LLM providers."""
+    """Configure LLM providers.
+    配置 LLM 提供者。"""
 
     def get_provider_choices() -> list[str]:
         """Build provider choices with config status indicators."""
@@ -825,7 +864,8 @@ def _configure_providers(config: Config) -> None:
 
 @lru_cache(maxsize=1)
 def _get_channel_info() -> dict[str, tuple[str, type[BaseModel]]]:
-    """Get channel info (display name + config class) from channel modules."""
+    """Get channel info (display name + config class) from channel modules.
+    从渠道模块获取渠道信息（显示名称+配置类）。"""
     import importlib
 
     from nanobot.channels.registry import discover_all
@@ -845,18 +885,21 @@ def _get_channel_info() -> dict[str, tuple[str, type[BaseModel]]]:
 
 
 def _get_channel_names() -> dict[str, str]:
-    """Get channel display names."""
+    """Get channel display names.
+    获取渠道显示名称。"""
     return {name: info[0] for name, info in _get_channel_info().items()}
 
 
 def _get_channel_config_class(channel: str) -> type[BaseModel] | None:
-    """Get channel config class."""
+    """Get channel config class.
+    获取渠道配置类。"""
     entry = _get_channel_info().get(channel)
     return entry[1] if entry else None
 
 
 def _configure_channel(config: Config, channel_name: str) -> None:
-    """Configure a single channel."""
+    """Configure a single channel.
+    配置单个渠道。"""
     channel_dict = getattr(config.channels, channel_name, None)
     if channel_dict is None:
         channel_dict = {}
@@ -881,7 +924,8 @@ def _configure_channel(config: Config, channel_name: str) -> None:
 
 
 def _configure_channels(config: Config) -> None:
-    """Configure chat channels."""
+    """Configure chat channels.
+    配置聊天渠道。"""
     channel_names = list(_get_channel_names().keys())
     choices = channel_names + ["<- Back"]
 
@@ -930,7 +974,8 @@ _SETTINGS_SETTER = {
 
 
 def _configure_general_settings(config: Config, section: str) -> None:
-    """Configure a general settings section (header + model edit + writeback)."""
+    """Configure a general settings section (header + model edit + writeback).
+    配置常规设置部分（标题+模型编辑+回写）。"""
     meta = _SETTINGS_SECTIONS.get(section)
     if not meta:
         return
@@ -945,7 +990,8 @@ def _configure_general_settings(config: Config, section: str) -> None:
 
 
 def _summarize_model(obj: BaseModel) -> list[tuple[str, str]]:
-    """Recursively summarize a Pydantic model. Returns list of (field, value) tuples."""
+    """Recursively summarize a Pydantic model. Returns list of (field, value) tuples.
+    递归总结 Pydantic 模型。返回 (字段, 值) 元组列表。"""
     items: list[tuple[str, str]] = []
     for field_name, field_info in type(obj).model_fields.items():
         value = getattr(obj, field_name, None)
@@ -964,7 +1010,8 @@ def _summarize_model(obj: BaseModel) -> list[tuple[str, str]]:
 
 
 def _print_summary_panel(rows: list[tuple[str, str]], title: str) -> None:
-    """Build a two-column summary panel and print it."""
+    """Build a two-column summary panel and print it.
+    构建并打印双列摘要面板。"""
     if not rows:
         return
     table = Table(show_header=False, box=None, padding=(0, 2))
@@ -976,7 +1023,8 @@ def _print_summary_panel(rows: list[tuple[str, str]], title: str) -> None:
 
 
 def _show_summary(config: Config) -> None:
-    """Display configuration summary using rich."""
+    """Display configuration summary using rich.
+    使用 rich 显示配置摘要。"""
     console.print()
 
     # Providers
@@ -1017,7 +1065,8 @@ def _show_summary(config: Config) -> None:
 
 
 def _pause() -> None:
-    """Pause for user acknowledgement before clearing the screen."""
+    """Pause for user acknowledgement before clearing the screen.
+    在清屏前等待用户确认。"""
     _get_questionary().text("Press Enter to continue...", default="").ask()
 
 
@@ -1025,12 +1074,14 @@ def _pause() -> None:
 
 
 def _has_unsaved_changes(original: Config, current: Config) -> bool:
-    """Return True when the onboarding session has committed changes."""
+    """Return True when the onboarding session has committed changes.
+    当引导会话已提交更改时返回 True。"""
     return original.model_dump(by_alias=True) != current.model_dump(by_alias=True)
 
 
 def _prompt_main_menu_exit(has_unsaved_changes: bool) -> str:
-    """Resolve how to leave the main menu."""
+    """Resolve how to leave the main menu.
+    解析如何离开主菜单。"""
     if not has_unsaved_changes:
         return "discard"
 
@@ -1054,9 +1105,11 @@ def _prompt_main_menu_exit(has_unsaved_changes: bool) -> str:
 
 def run_onboard(initial_config: Config | None = None) -> OnboardResult:
     """Run the interactive onboarding questionnaire.
+    运行交互式引导问卷。
 
     Args:
         initial_config: Optional pre-loaded config to use as starting point.
+                       如果为 None，则从配置文件加载或创建新的默认配置。
                        If None, loads from config file or creates new default.
     """
     _get_questionary()

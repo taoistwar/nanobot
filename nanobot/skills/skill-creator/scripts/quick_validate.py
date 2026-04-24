@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 Minimal validator for nanobot skill folders.
+nanobot 技能文件夹的最小化验证器
 """
 
 import re
@@ -13,7 +14,9 @@ try:
 except ModuleNotFoundError:
     yaml = None
 
+# 技能名称的最大长度 / Maximum length for skill name
 MAX_SKILL_NAME_LENGTH = 64
+# 允许的 frontmatter 键 / Allowed frontmatter keys
 ALLOWED_FRONTMATTER_KEYS = {
     "name",
     "description",
@@ -22,11 +25,15 @@ ALLOWED_FRONTMATTER_KEYS = {
     "license",
     "allowed-tools",
 }
+# 允许的资源目录 / Allowed resource directories
 ALLOWED_RESOURCE_DIRS = {"scripts", "references", "assets"}
+# 占位符标记 / Placeholder markers
 PLACEHOLDER_MARKERS = ("[todo", "todo:")
 
 
 def _extract_frontmatter(content: str) -> Optional[str]:
+    # 从内容中提取 frontmatter（YAML 头部的 --- 分隔符之间的内容）
+    # Extract frontmatter (content between --- delimiters in YAML header)
     lines = content.splitlines()
     if not lines or lines[0].strip() != "---":
         return None
@@ -38,6 +45,7 @@ def _extract_frontmatter(content: str) -> Optional[str]:
 
 def _parse_simple_frontmatter(frontmatter_text: str) -> Optional[dict[str, str]]:
     """Fallback parser for simple frontmatter when PyYAML is unavailable."""
+    # 当 PyYAML 不可用时的简单 frontmatter 备用解析器
     parsed: dict[str, str] = {}
     current_key: Optional[str] = None
     multiline_key: Optional[str] = None
@@ -84,6 +92,8 @@ def _parse_simple_frontmatter(frontmatter_text: str) -> Optional[dict[str, str]]
 
 
 def _load_frontmatter(frontmatter_text: str) -> tuple[Optional[dict], Optional[str]]:
+    # 加载并解析 frontmatter 文本
+    # Load and parse frontmatter text
     if yaml is not None:
         try:
             frontmatter = yaml.safe_load(frontmatter_text)
@@ -100,6 +110,8 @@ def _load_frontmatter(frontmatter_text: str) -> tuple[Optional[dict], Optional[s
 
 
 def _validate_skill_name(name: str, folder_name: str) -> Optional[str]:
+    # 验证技能名称的格式和长度
+    # Validate skill name format and length
     if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", name):
         return (
             f"Name '{name}' should be hyphen-case "
@@ -116,6 +128,8 @@ def _validate_skill_name(name: str, folder_name: str) -> Optional[str]:
 
 
 def _validate_description(description: str) -> Optional[str]:
+    # 验证描述内容是否有效
+    # Validate description content
     trimmed = description.strip()
     if not trimmed:
         return "Description cannot be empty"
@@ -130,7 +144,10 @@ def _validate_description(description: str) -> Optional[str]:
 
 
 def validate_skill(skill_path):
-    """Validate a skill folder structure and required frontmatter."""
+    """
+    Validate a skill folder structure and required frontmatter.
+    验证技能文件夹结构和必需的 frontmatter
+    """
     skill_path = Path(skill_path).resolve()
 
     if not skill_path.exists():
@@ -155,6 +172,7 @@ def validate_skill(skill_path):
     if error:
         return False, error
 
+    # 检查是否有不允许的 frontmatter 键 / Check for disallowed frontmatter keys
     unexpected_keys = sorted(set(frontmatter.keys()) - ALLOWED_FRONTMATTER_KEYS)
     if unexpected_keys:
         allowed = ", ".join(sorted(ALLOWED_FRONTMATTER_KEYS))
@@ -187,6 +205,7 @@ def validate_skill(skill_path):
     if always is not None and not isinstance(always, bool):
         return False, f"'always' must be a boolean, got {type(always).__name__}"
 
+    # 验证技能根目录中的文件结构 / Validate file structure in skill root
     for child in skill_path.iterdir():
         if child.name == "SKILL.md":
             continue
@@ -204,6 +223,7 @@ def validate_skill(skill_path):
 
 
 if __name__ == "__main__":
+    # 命令行入口点 / Command line entry point
     if len(sys.argv) != 2:
         print("Usage: python quick_validate.py <skill_directory>")
         sys.exit(1)

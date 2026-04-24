@@ -1,5 +1,7 @@
 """Microsoft Teams channel MVP using a tiny built-in HTTP webhook server.
 
+// Microsoft Teams 频道 MVP，使用内置小型 HTTP webhook 服务器
+
 Scope:
 - DM-focused MVP
 - text inbound/outbound
@@ -46,6 +48,7 @@ if MSTEAMS_AVAILABLE:
 
 class MSTeamsConfig(Base):
     """Microsoft Teams channel configuration."""
+    // Microsoft Teams 频道配置
 
     enabled: bool = False
     app_id: str = ""
@@ -74,6 +77,7 @@ class ConversationRef:
 
 class MSTeamsChannel(BaseChannel):
     """Microsoft Teams channel (DM-first MVP)."""
+    // Microsoft Teams 频道（以 DM 为中心的 MVP）
 
     name = "msteams"
     display_name = "Microsoft Teams"

@@ -1,4 +1,5 @@
 """Telegram channel implementation using python-telegram-bot."""
+// Telegram 频道实现，使用 python-telegram-bot
 
 from __future__ import annotations
 
@@ -35,17 +36,17 @@ TELEGRAM_REPLY_CONTEXT_MAX_LEN = TELEGRAM_MAX_MESSAGE_LEN  # Max length for repl
 
 
 def _escape_telegram_html(text: str) -> str:
-    """Escape text for Telegram HTML parse mode."""
+    """为 Telegram HTML 解析模式转义文本"""
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
 def _tool_hint_to_telegram_blockquote(text: str) -> str:
-    """Render tool hints as an expandable blockquote (collapsed by default)."""
+    """将工具提示渲染为可展开的引用块（默认折叠）"""
     return f"<blockquote expandable>{_escape_telegram_html(text)}</blockquote>" if text else ""
 
 
 def _strip_md(s: str) -> str:
-    """Strip markdown inline formatting from text."""
+    """从文本中剥离 markdown 内联格式"""
     s = re.sub(r'\*\*(.+?)\*\*', r'\1', s)
     s = re.sub(r'__(.+?)__', r'\1', s)
     s = re.sub(r'~~(.+?)~~', r'\1', s)
@@ -54,10 +55,10 @@ def _strip_md(s: str) -> str:
 
 
 def _strip_md_block(text: str) -> str:
-    """Strip block-level and inline markdown for readable plain-text preview.
+    """剥离块级和内联 markdown 以获得可读的纯文本预览
 
-    Used during streaming mid-edits so users see clean text instead of raw
-    markdown syntax while the response is still being generated.
+    在流式传输中途编辑期间使用，以便用户在响应仍在生成时看到
+    干净的文本而不是原始 markdown 语法
     """
     # Code blocks -> just the code
     text = re.sub(r'```[\w]*\n?([\s\S]*?)```', r'\1', text)
@@ -82,7 +83,7 @@ def _strip_md_block(text: str) -> str:
 
 
 def _render_table_box(table_lines: list[str]) -> str:
-    """Convert markdown pipe-table to compact aligned text for <pre> display."""
+    """将 markdown 管道表格转换为紧凑的对齐文本以供 <pre> 显示"""
 
     def dw(s: str) -> int:
         return sum(2 if unicodedata.east_asian_width(c) in ('W', 'F') else 1 for c in s)
@@ -114,9 +115,7 @@ def _render_table_box(table_lines: list[str]) -> str:
 
 
 def _markdown_to_telegram_html(text: str) -> str:
-    """
-    Convert markdown to Telegram-safe HTML.
-    """
+    """将 markdown 转换为 Telegram 安全的 HTML"""
     if not text:
         return ""
 
@@ -219,6 +218,7 @@ class _StreamBuf:
 
 class TelegramConfig(Base):
     """Telegram channel configuration."""
+    // Telegram 频道配置
 
     enabled: bool = False
     token: str = ""
@@ -241,6 +241,8 @@ class TelegramChannel(BaseChannel):
 
     Simple and reliable - no webhook/public IP needed.
     """
+    // Telegram 频道，使用长轮询
+    // 简单可靠 - 无需 webhook/公网 IP
 
     name = "telegram"
     display_name = "Telegram"
@@ -278,7 +280,7 @@ class TelegramChannel(BaseChannel):
         self._stream_bufs: dict[str, _StreamBuf] = {}  # chat_id -> streaming state
 
     def is_allowed(self, sender_id: str) -> bool:
-        """Preserve Telegram's legacy id|username allowlist matching."""
+        """保留 Telegram 传统的 id|username 允许列表匹配"""
         if super().is_allowed(sender_id):
             return True
 
@@ -298,7 +300,7 @@ class TelegramChannel(BaseChannel):
 
     @staticmethod
     def _normalize_telegram_command(content: str) -> str:
-        """Map Telegram-safe command aliases back to canonical nanobot commands."""
+        """将 Telegram 安全的命令别名映射回规范的 nanobot 命令"""
         if not content.startswith("/"):
             return content
         if content == "/dream_log" or content.startswith("/dream_log "):
@@ -425,7 +427,7 @@ class TelegramChannel(BaseChannel):
 
     @staticmethod
     def _get_media_type(path: str) -> str:
-        """Guess media type from file extension."""
+        """从文件扩展名猜测媒体类型"""
         ext = path.rsplit(".", 1)[-1].lower() if "." in path else ""
         if ext in ("jpg", "jpeg", "png", "gif", "webp"):
             return "photo"
@@ -437,10 +439,11 @@ class TelegramChannel(BaseChannel):
 
     @staticmethod
     def _is_remote_media_url(path: str) -> bool:
+        """检查路径是否为远程媒体 URL"""
         return path.startswith(("http://", "https://"))
 
     async def send(self, msg: OutboundMessage) -> None:
-        """Send a message through Telegram."""
+        """通过 Telegram 发送消息"""
         if not self._app:
             logger.warning("Telegram bot not running")
             return
@@ -536,7 +539,7 @@ class TelegramChannel(BaseChannel):
                 )
 
     async def _call_with_retry(self, fn, *args, **kwargs):
-        """Call an async Telegram API function with retry on pool/network timeout and RetryAfter."""
+        """在池/网络超时和 RetryAfter 时重试调用异步 Telegram API 函数"""
         from telegram.error import RetryAfter
 
         for attempt in range(1, _SEND_MAX_RETRIES + 1):
@@ -570,7 +573,7 @@ class TelegramChannel(BaseChannel):
         render_as_blockquote: bool = False,
         reply_markup=None,
     ) -> None:
-        """Send a plain text message with HTML fallback."""
+        """发送带 HTML 回退的纯文本消息"""
         try:
             html = _tool_hint_to_telegram_blockquote(text) if render_as_blockquote else _markdown_to_telegram_html(text)
             await self._call_with_retry(
@@ -597,10 +600,11 @@ class TelegramChannel(BaseChannel):
 
     @staticmethod
     def _is_not_modified_error(exc: Exception) -> bool:
+        """检查异常是否为"消息未修改"错误"""
         return isinstance(exc, BadRequest) and "message is not modified" in str(exc).lower()
 
     async def send_delta(self, chat_id: str, delta: str, metadata: dict[str, Any] | None = None) -> None:
-        """Progressive message editing: send on first delta, edit on subsequent ones."""
+        """渐进式消息编辑：首次 delta 发送，后续编辑"""
         if not self._app:
             return
         meta = metadata or {}
@@ -724,6 +728,13 @@ class TelegramChannel(BaseChannel):
 
     async def _flush_stream_overflow(
         self,
+        int_chat_id: int,
+        buf: _StreamBuf,
+        thread_kwargs: dict,
+    ) -> None:
+        """刷新流式缓冲区溢出，发送额外消息"""
+
+
         chat_id: int,
         buf: "_StreamBuf",
         thread_kwargs: dict,
@@ -761,7 +772,7 @@ class TelegramChannel(BaseChannel):
         buf.text = tail
 
     async def _on_start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /start command."""
+        """处理 /start 命令"""
         if not update.message or not update.effective_user:
             return
 
@@ -773,20 +784,20 @@ class TelegramChannel(BaseChannel):
         )
 
     async def _on_help(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /help command, bypassing ACL so all users can access it."""
+        """处理 /help 命令，绕过 ACL 以便所有用户都可以访问"""
         if not update.message:
             return
         await update.message.reply_text(build_help_text())
 
     @staticmethod
     def _sender_id(user) -> str:
-        """Build sender_id with username for allowlist matching."""
+        """构建带用户名的 sender_id 用于允许列表匹配"""
         sid = str(user.id)
         return f"{sid}|{user.username}" if user.username else sid
 
     @staticmethod
     def _derive_topic_session_key(message) -> str | None:
-        """Derive topic-scoped session key for Telegram chats with threads."""
+        """为带线程的 Telegram 聊天派生主题范围的会话键"""
         message_thread_id = getattr(message, "message_thread_id", None)
         if message_thread_id is None:
             return None
@@ -794,7 +805,7 @@ class TelegramChannel(BaseChannel):
 
     @staticmethod
     def _build_message_metadata(message, user) -> dict:
-        """Build common Telegram inbound metadata payload."""
+        """构建通用的 Telegram 入站元数据载荷"""
         reply_to = getattr(message, "reply_to_message", None)
         return {
             "message_id": message.message_id,
@@ -808,7 +819,7 @@ class TelegramChannel(BaseChannel):
         }
 
     async def _extract_reply_context(self, message) -> str | None:
-        """Extract text from the message being replied to, if any."""
+        """提取被回复消息中的文本（如果有的话）"""
         reply = getattr(message, "reply_to_message", None)
         if not reply:
             return None
@@ -834,7 +845,7 @@ class TelegramChannel(BaseChannel):
     async def _download_message_media(
         self, msg, *, add_failure_content: bool = False
     ) -> tuple[list[str], list[str]]:
-        """Download media from a message (current or reply). Returns (media_paths, content_parts)."""
+        """从消息中下载媒体（当前或回复）。返回 (media_paths, content_parts)"""
         media_file = None
         media_type = None
         if getattr(msg, "photo", None):
@@ -886,7 +897,7 @@ class TelegramChannel(BaseChannel):
             return [], []
 
     async def _ensure_bot_identity(self) -> tuple[int | None, str | None]:
-        """Load bot identity once and reuse it for mention/reply checks."""
+        """加载机器人身份一次并重用于 mention/reply 检查"""
         if self._bot_user_id is not None or self._bot_username is not None:
             return self._bot_user_id, self._bot_username
         if not self._app:
@@ -903,7 +914,7 @@ class TelegramChannel(BaseChannel):
         bot_username: str,
         bot_id: int | None,
     ) -> bool:
-        """Check Telegram mention entities against the bot username."""
+        """根据机器人用户名检查 Telegram mention 实体"""
         handle = f"@{bot_username}".lower()
         for entity in entities or []:
             entity_type = getattr(entity, "type", None)
@@ -923,7 +934,7 @@ class TelegramChannel(BaseChannel):
         return handle in text.lower()
 
     async def _is_group_message_for_bot(self, message) -> bool:
-        """Allow group messages when policy is open, @mentioned, or replying to the bot."""
+        """当策略为 open、被 @ 或回复机器人时允许群消息"""
         if message.chat.type == "private" or self.config.group_policy == "open":
             return True
 
@@ -950,7 +961,7 @@ class TelegramChannel(BaseChannel):
         return bool(bot_id and reply_user and reply_user.id == bot_id)
 
     def _remember_thread_context(self, message) -> None:
-        """Cache Telegram thread context by chat/message id for follow-up replies."""
+        """通过 chat/message id 缓存 Telegram 线程上下文以供后续回复使用"""
         message_thread_id = getattr(message, "message_thread_id", None)
         if message_thread_id is None:
             return
@@ -960,7 +971,7 @@ class TelegramChannel(BaseChannel):
             self._message_threads.pop(next(iter(self._message_threads)))
 
     async def _forward_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Forward slash commands to the bus for unified handling in AgentLoop."""
+        """将斜杠命令转发到总线以在 AgentLoop 中统一处理"""
         if not update.message or not update.effective_user:
             return
         message = update.message
@@ -984,7 +995,7 @@ class TelegramChannel(BaseChannel):
         )
 
     async def _on_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle incoming messages (text, photos, voice, documents)."""
+        """处理传入消息（文本、照片、语音、文档）"""
         if not update.message or not update.effective_user:
             return
 
@@ -1079,7 +1090,7 @@ class TelegramChannel(BaseChannel):
         )
 
     async def _flush_media_group(self, key: str) -> None:
-        """Wait briefly, then forward buffered media-group as one turn."""
+        """稍等片刻，然后将缓冲的媒体组作为一个回合转发"""
         try:
             await asyncio.sleep(0.6)
             if not (buf := self._media_group_buffers.pop(key, None)):
@@ -1095,19 +1106,19 @@ class TelegramChannel(BaseChannel):
             self._media_group_tasks.pop(key, None)
 
     def _start_typing(self, chat_id: str) -> None:
-        """Start sending 'typing...' indicator for a chat."""
+        """开始为聊天发送 'typing...' 指示"""
         # Cancel any existing typing task for this chat
         self._stop_typing(chat_id)
         self._typing_tasks[chat_id] = asyncio.create_task(self._typing_loop(chat_id))
 
     def _stop_typing(self, chat_id: str) -> None:
-        """Stop the typing indicator for a chat."""
+        """停止聊天的打字指示"""
         task = self._typing_tasks.pop(chat_id, None)
         if task and not task.done():
             task.cancel()
 
     async def _add_reaction(self, chat_id: str, message_id: int, emoji: str) -> None:
-        """Add emoji reaction to a message (best-effort, non-blocking)."""
+        """为消息添加 emoji 反应（尽力而为，非阻塞）"""
         if not self._app or not emoji:
             return
         try:
@@ -1120,7 +1131,7 @@ class TelegramChannel(BaseChannel):
             logger.debug("Telegram reaction failed: {}", e)
 
     async def _remove_reaction(self, chat_id: str, message_id: int) -> None:
-        """Remove emoji reaction from a message (best-effort, non-blocking)."""
+        """从消息中移除 emoji 反应（尽力而为，非阻塞）"""
         if not self._app:
             return
         try:
@@ -1133,7 +1144,7 @@ class TelegramChannel(BaseChannel):
             logger.debug("Telegram reaction removal failed: {}", e)
 
     async def _typing_loop(self, chat_id: str) -> None:
-        """Repeatedly send 'typing' action until cancelled."""
+        """重复发送 'typing' 操作直到被取消"""
         try:
             while self._app:
                 await self._app.bot.send_chat_action(chat_id=int(chat_id), action="typing")
@@ -1145,7 +1156,7 @@ class TelegramChannel(BaseChannel):
 
     @staticmethod
     def _format_telegram_error(exc: Exception) -> str:
-        """Return a short, readable error summary for logs."""
+        """返回简短的、可读的错误摘要用于日志"""
         text = str(exc).strip()
         if text:
             return text
@@ -1158,7 +1169,7 @@ class TelegramChannel(BaseChannel):
         return exc.__class__.__name__
 
     def _on_polling_error(self, exc: Exception) -> None:
-        """Keep long-polling network failures to a single readable line."""
+        """将长轮询网络故障保持为单行可读信息"""
         summary = self._format_telegram_error(exc)
         if isinstance(exc, (NetworkError, TimedOut)):
             logger.warning("Telegram polling network issue: {}", summary)
@@ -1166,7 +1177,7 @@ class TelegramChannel(BaseChannel):
             logger.error("Telegram polling error: {}", summary)
 
     async def _on_error(self, update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Log polling / handler errors instead of silently swallowing them."""
+        """记录轮询/处理程序错误而不是静默吞下它们"""
         summary = self._format_telegram_error(context.error)
 
         if isinstance(context.error, (NetworkError, TimedOut)):
@@ -1180,7 +1191,7 @@ class TelegramChannel(BaseChannel):
         mime_type: str | None,
         filename: str | None = None,
     ) -> str:
-        """Get file extension based on media type or original filename."""
+        """根据媒体类型或原始文件名获取文件扩展名"""
         if mime_type:
             ext_map = {
                 "image/jpeg": ".jpg", "image/png": ".png", "image/gif": ".gif",
@@ -1201,7 +1212,7 @@ class TelegramChannel(BaseChannel):
         return ""
 
     def _build_keyboard(self, buttons: list) -> InlineKeyboardMarkup | None:
-        """Build inline keyboard markup if inline_keyboards is enabled."""
+        """如果启用了 inline_keyboards，则构建内联键盘标记"""
         if not buttons or not self.config.inline_keyboards:
             return None
         keyboard = [
@@ -1212,7 +1223,7 @@ class TelegramChannel(BaseChannel):
 
     @staticmethod
     def _safe_callback_data(label: str) -> str:
-        # Telegram caps callback_data at 64 bytes UTF-8; truncate at a char boundary so the keyboard still sends.
+        """安全处理回调数据：Telegram 将 callback_data 限制为 64 字节 UTF-8；在字符边界处截断"""
         encoded = label.encode("utf-8")
         if len(encoded) <= 64:
             return label
@@ -1220,11 +1231,11 @@ class TelegramChannel(BaseChannel):
 
     @staticmethod
     def _buttons_as_text(buttons: list[list[str]]) -> str:
-        # Buttons are semantic options; when we can't render a keyboard, the user still needs to see them.
+        """将按钮作为文本返回：当无法渲染键盘时，用户仍然需要看到它们"""
         return "\n".join(" ".join(f"[{label}]" for label in row) for row in buttons if row)
 
     async def _on_callback_query(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle inline keyboard button clicks (callback queries)."""
+        """处理内联键盘按钮点击（回调查询）"""
         if not update.callback_query or not update.effective_user:
             return
         query = update.callback_query

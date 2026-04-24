@@ -1,4 +1,5 @@
 """WebSocket server channel: nanobot acts as a WebSocket server and serves connected clients."""
+// WebSocket 服务器频道：nanobot 作为 WebSocket 服务器并服务已连接的客户端
 
 from __future__ import annotations
 
@@ -358,6 +359,7 @@ def _issue_route_secret_matches(headers: Any, configured_secret: str) -> bool:
 
 class WebSocketChannel(BaseChannel):
     """Run a local WebSocket server; forward text/JSON messages to the message bus."""
+    // 运行本地 WebSocket 服务器；将文本/JSON 消息转发到消息总线
 
     name = "websocket"
     display_name = "WebSocket"

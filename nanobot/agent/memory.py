@@ -1,4 +1,6 @@
 """Memory system: pure file I/O store, lightweight Consolidator, and Dream processor."""
+// 记忆系统：纯文件 I/O 存储、轻量级 Consolidator 和 Dream 处理器
+// 记忆系统：纯文件 I/O 存储、轻量级 Consolidator 和 Dream 处理器
 
 from __future__ import annotations
 
@@ -25,21 +27,30 @@ if TYPE_CHECKING:
     from nanobot.session.manager import Session, SessionManager
 
 
-# ---------------------------------------------------------------------------
-# MemoryStore — pure file I/O layer
-# ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// MemoryStore — 纯文件 I/O 层
+// ---------------------------------------------------------------------------
 
 class MemoryStore:
     """Pure file I/O for memory files: MEMORY.md, history.jsonl, SOUL.md, USER.md."""
+    // 内存文件的纯文件 I/O：MEMORY.md、history.jsonl、SOUL.md、USER.md
+    // 内存文件的纯文件 I/O：MEMORY.md、history.jsonl、SOUL.md、USER.md
 
     _DEFAULT_MAX_HISTORY = 1000
+    // 默认最大历史条目数
     _LEGACY_ENTRY_START_RE = re.compile(r"^\[(\d{4}-\d{2}-\d{2}[^\]]*)\]\s*")
+    // 旧版条目起始正则
     _LEGACY_TIMESTAMP_RE = re.compile(r"^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2})\]\s*")
+    // 旧版时间戳正则
     _LEGACY_RAW_MESSAGE_RE = re.compile(
         r"^\[\d{4}-\d{2}-\d{2}[^\]]*\]\s+[A-Z][A-Z0-9_]*(?:\s+\[tools:\s*[^\]]+\])?:"
     )
+    // 旧版原始消息正则
 
     def __init__(self, workspace: Path, max_history_entries: int = _DEFAULT_MAX_HISTORY):
+        // 初始化 MemoryStore
+        // workspace: 工作空间路径
+        // max_history_entries: 最大历史条目数
         self.workspace = workspace
         self.max_history_entries = max_history_entries
         self.memory_dir = ensure_dir(workspace / "memory")
@@ -59,12 +70,14 @@ class MemoryStore:
 
     @property
     def git(self) -> GitStore:
+        // 返回 GitStore 实例
         return self._git
 
-    # -- generic helpers -----------------------------------------------------
+    // -- 通用辅助方法 -----------------------------------------------------
 
     @staticmethod
     def read_file(path: Path) -> str:
+        // 读取文件内容
         try:
             return path.read_text(encoding="utf-8")
         except FileNotFoundError:
@@ -76,6 +89,8 @@ class MemoryStore:
         The migration is best-effort and prioritizes preserving as much content
         as possible over perfect parsing.
         """
+        // 从旧版 HISTORY.md 一次性升级到 history.jsonl
+        // 迁移是尽力而为的，优先保留尽可能多的内容而非完美解析
         if not self.legacy_history_file.exists():
             return
         if self.history_file.exists() and self.history_file.stat().st_size > 0:
@@ -191,12 +206,14 @@ class MemoryStore:
             suffix += 1
         return candidate
 
-    # -- MEMORY.md (long-term facts) -----------------------------------------
+    // -- MEMORY.md（长期事实） -----------------------------------------
 
     def read_memory(self) -> str:
+        // 读取 MEMORY.md 文件内容
         return self.read_file(self.memory_file)
 
     def write_memory(self, content: str) -> None:
+        // 写入 MEMORY.md 文件内容
         self.memory_file.write_text(content, encoding="utf-8")
 
     # -- SOUL.md -------------------------------------------------------------
@@ -420,6 +437,7 @@ _HISTORY_ENTRY_HARD_CAP = 64_000      # emergency cap in append_history
 
 class Consolidator:
     """Lightweight consolidation: summarizes evicted messages into history.jsonl."""
+    // 轻量级整合：将淘汰的消息汇总到 history.jsonl
 
     _MAX_CONSOLIDATION_ROUNDS = 5
 
@@ -521,6 +539,8 @@ class Consolidator:
 
         Returns the summary text on success, None if nothing to archive.
         """
+        // 通过 LLM 汇总消息并追加到 history.jsonl
+        // 成功时返回摘要文本，如果无事可归档则返回 None
         if not messages:
             return None
         try:
@@ -562,6 +582,10 @@ class Consolidator:
         The budget reserves space for completion tokens and a safety buffer
         so the LLM request never exceeds the context window.
         """
+        // 循环：归档旧消息直到 prompt 适合安全预算
+        //
+        // 预算为完成 tokens 和安全缓冲区保留空间
+        // 以确保 LLM 请求永远不会超过上下文窗口
         if not session.messages or self.context_window_tokens <= 0:
             return
 
@@ -675,6 +699,11 @@ class Dream:
     Phase 2 delegates to AgentRunner with read_file / edit_file tools so the
     LLM can make targeted, incremental edits instead of replacing entire files.
     """
+    // 两阶段记忆处理器：分析 history.jsonl，然后通过 AgentRunner 编辑文件
+    //
+    // 阶段 1 生成分析摘要（普通 LLM 调用）
+    // 阶段 2 委托给 AgentRunner，配合 read_file / edit_file 工具
+    // 使 LLM 能够进行有针对性的增量编辑，而非替换整个文件
 
     # Caps on prompt-bound inputs so Dream's LLM calls never exceed the model's
     # context window just because a file (or a legacy large history entry) grew
@@ -810,6 +839,7 @@ class Dream:
 
     async def run(self) -> bool:
         """Process unprocessed history entries. Returns True if work was done."""
+        // 处理未处理的历史条目。如果有工作完成则返回 True
         from nanobot.agent.skills import BUILTIN_SKILLS_DIR
 
         last_cursor = self.store.get_last_dream_cursor()

@@ -1,4 +1,5 @@
 """WeCom (Enterprise WeChat) channel implementation using wecom_aibot_sdk."""
+// 企业微信 (WeCom) 频道实现，使用 wecom_aibot_sdk
 
 import asyncio
 import base64
@@ -54,6 +55,7 @@ def _guess_wecom_media_type(filename: str) -> str:
 
 class WecomConfig(Base):
     """WeCom (Enterprise WeChat) AI Bot channel configuration."""
+    // 企业微信 (WeCom) AI 机器人频道配置
 
     enabled: bool = False
     bot_id: str = ""
@@ -80,6 +82,11 @@ class WecomChannel(BaseChannel):
     Requires:
     - Bot ID and Secret from WeCom AI Bot platform
     """
+    // 企业微信 (WeCom) 频道，使用 WebSocket 长连接
+    // 使用 WebSocket 接收事件 - 无需公网 IP 或 webhook
+    //
+    // 依赖：
+    // - 企业微信 AI 机器人平台的 Bot ID 和 Secret
 
     name = "wecom"
     display_name = "WeCom"

@@ -39,10 +39,13 @@ API_CHAT_ID = "default"
 
 # ---------------------------------------------------------------------------
 # Response helpers
+# 响应辅助函数
 # ---------------------------------------------------------------------------
 
 
 def _error_json(status: int, message: str, err_type: str = "invalid_request_error") -> web.Response:
+    """构建错误响应 JSON。"""
+    # 构建符合 OpenAI 格式的错误响应
     return web.json_response(
         {"error": {"message": message, "type": err_type, "code": status}},
         status=status,
@@ -50,6 +53,8 @@ def _error_json(status: int, message: str, err_type: str = "invalid_request_erro
 
 
 def _chat_completion_response(content: str, model: str) -> dict[str, Any]:
+    """构建聊天补全响应。"""
+    # 返回符合 OpenAI Chat Completion 格式的响应字典
     return {
         "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
         "object": "chat.completion",
@@ -67,7 +72,8 @@ def _chat_completion_response(content: str, model: str) -> dict[str, Any]:
 
 
 def _response_text(value: Any) -> str:
-    """Normalize process_direct output to plain assistant text."""
+    """Normalize process_direct output to plain assistant text.
+    将 process_direct 的输出规范化为纯文本格式。"""
     if value is None:
         return ""
     if hasattr(value, "content"):
@@ -76,11 +82,13 @@ def _response_text(value: Any) -> str:
 
 # ---------------------------------------------------------------------------
 # SSE helpers
+# SSE 辅助函数 - Server-Sent Events 流式响应支持
 # ---------------------------------------------------------------------------
 
 
 def _sse_chunk(delta: str, model: str, chunk_id: str, finish_reason: str | None = None) -> bytes:
-    """Format a single OpenAI-compatible SSE chunk."""
+    """Format a single OpenAI-compatible SSE chunk.
+    格式化单个 OpenAI 兼容的 SSE 数据块。"""
     payload = {
         "id": chunk_id,
         "object": "chat.completion.chunk",
@@ -101,11 +109,13 @@ _SSE_DONE = b"data: [DONE]\n\n"
 
 # ---------------------------------------------------------------------------
 # Upload helpers
+# 上传辅助函数 - 处理文件上传和内容解析
 # ---------------------------------------------------------------------------
 
 
 def _parse_json_content(body: dict) -> tuple[str, list[str]]:
-    """Parse JSON request body. Returns (text, media_paths)."""
+    """Parse JSON request body. Returns (text, media_paths).
+    解析 JSON 请求体，返回 (文本内容, 媒体文件路径列表)。"""
     messages = body.get("messages")
     if not isinstance(messages, list) or len(messages) != 1:
         raise ValueError("Only a single user message is supported")
@@ -145,7 +155,8 @@ def _parse_json_content(body: dict) -> tuple[str, list[str]]:
 
 
 async def _parse_multipart(request: web.Request) -> tuple[str, list[str], str | None, str | None]:
-    """Parse multipart/form-data. Returns (text, media_paths, session_id, model)."""
+    """Parse multipart/form-data. Returns (text, media_paths, session_id, model).
+    解析 multipart/form-data 格式请求，返回 (文本, 媒体路径, 会话ID, 模型)。"""
     media_dir = get_media_dir("api")
     reader = await request.multipart()
     text = ""
@@ -183,11 +194,13 @@ async def _parse_multipart(request: web.Request) -> tuple[str, list[str], str | 
 
 # ---------------------------------------------------------------------------
 # Route handlers
+# 路由处理器 - 处理 API 端点请求
 # ---------------------------------------------------------------------------
 
 
 async def handle_chat_completions(request: web.Request) -> web.Response:
-    """POST /v1/chat/completions — supports JSON and multipart/form-data."""
+    """POST /v1/chat/completions — supports JSON and multipart/form-data.
+    处理聊天补全请求，支持 JSON 和 multipart/form-data 两种格式。"""
     content_type = request.content_type or ""
     if not isinstance(content_type, str):
         content_type = ""
@@ -331,7 +344,8 @@ async def handle_chat_completions(request: web.Request) -> web.Response:
 
 
 async def handle_models(request: web.Request) -> web.Response:
-    """GET /v1/models"""
+    """GET /v1/models
+    返回可用模型列表。"""
     model_name = request.app.get("model_name", "nanobot")
     return web.json_response(
         {
@@ -349,12 +363,14 @@ async def handle_models(request: web.Request) -> web.Response:
 
 
 async def handle_health(request: web.Request) -> web.Response:
-    """GET /health"""
+    """GET /health
+    健康检查端点。"""
     return web.json_response({"status": "ok"})
 
 
 # ---------------------------------------------------------------------------
 # App factory
+# 应用工厂 - 创建 aiohttp 应用
 # ---------------------------------------------------------------------------
 
 
@@ -362,11 +378,12 @@ def create_app(
     agent_loop, model_name: str = "nanobot", request_timeout: float = 120.0
 ) -> web.Application:
     """Create the aiohttp application.
+    创建 aiohttp 应用实例。
 
     Args:
-        agent_loop: An initialized AgentLoop instance.
-        model_name: Model name reported in responses.
-        request_timeout: Per-request timeout in seconds.
+        agent_loop: An initialized AgentLoop instance. / 初始化的 AgentLoop 实例
+        model_name: Model name reported in responses. / 响应中报告的模型名称
+        request_timeout: Per-request timeout in seconds. / 每个请求的超时时间（秒）
     """
     app = web.Application(client_max_size=20 * 1024 * 1024)  # 20MB for base64 images
     app["agent_loop"] = agent_loop

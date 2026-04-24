@@ -1,4 +1,4 @@
-"""Path abbreviation utilities for display."""
+"""用于显示的路径缩写工具模块。"""
 
 from __future__ import annotations
 
@@ -8,13 +8,13 @@ from urllib.parse import urlparse
 
 
 def abbreviate_path(path: str, max_len: int = 40) -> str:
-    """Abbreviate a file path or URL, preserving basename and key directories.
+    """缩短文件路径或 URL，保留基名和关键目录。
 
-    Strategy:
-    1. Return as-is if short enough
-    2. Replace home directory with ~/
-    3. From right, keep basename + parent dirs until budget exhausted
-    4. Prefix with …/
+    策略：
+    1. 如果足够短则原样返回
+    2. 将主目录替换为 ~/
+    3. 从右向左，保留基名和父目录直到预算耗尽
+    4. 前面加上 …/
     """
     if not path:
         return path
@@ -71,7 +71,7 @@ def abbreviate_path(path: str, max_len: int = 40) -> str:
 
 
 def _abbreviate_url(url: str, max_len: int = 40) -> str:
-    """Abbreviate a URL keeping domain and filename."""
+    """缩短 URL，保留域名和文件名。"""
     if len(url) <= max_len:
         return url
 

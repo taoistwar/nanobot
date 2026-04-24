@@ -1,4 +1,5 @@
 """OpenAI Codex Responses Provider."""
+# OpenAI Codex Responses 提供者
 
 from __future__ import annotations
 
@@ -25,6 +26,7 @@ DEFAULT_ORIGINATOR = "nanobot"
 
 class OpenAICodexProvider(LLMProvider):
     """Use Codex OAuth to call the Responses API."""
+    # 使用 Codex OAuth 调用 Responses API
 
     def __init__(self, default_model: str = "openai-codex/gpt-5.1-codex"):
         super().__init__(api_key=None, api_base=None)

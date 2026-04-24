@@ -1,4 +1,6 @@
-"""Search tools: grep and glob."""
+"""Search tools: grep and glob.
+// 搜索工具：grep 和 glob。
+"""
 
 from __future__ import annotations
 
@@ -37,10 +39,14 @@ _TYPE_GLOB_MAP = {
 
 
 def _normalize_pattern(pattern: str) -> str:
+    """规范化 glob 模式。
+    // Normalize glob pattern."""
     return pattern.strip().replace("\\", "/")
 
 
 def _match_glob(rel_path: str, name: str, pattern: str) -> bool:
+    """检查文件路径/名称是否匹配 glob 模式。
+    // Check if file path/name matches glob pattern."""
     normalized = _normalize_pattern(pattern)
     if not normalized:
         return False
@@ -50,6 +56,8 @@ def _match_glob(rel_path: str, name: str, pattern: str) -> bool:
 
 
 def _is_binary(raw: bytes) -> bool:
+    """检测字节数据是否为二进制。
+    // Detect if byte data is binary."""
     if b"\x00" in raw:
         return True
     sample = raw[:4096]
@@ -60,6 +68,8 @@ def _is_binary(raw: bytes) -> bool:
 
 
 def _paginate(items: list[T], limit: int | None, offset: int) -> tuple[list[T], bool]:
+    """分页处理结果列表。
+    // Paginate result list."""
     if limit is None:
         return items[offset:], False
     sliced = items[offset : offset + limit]
@@ -68,6 +78,8 @@ def _paginate(items: list[T], limit: int | None, offset: int) -> tuple[list[T], 
 
 
 def _pagination_note(limit: int | None, offset: int, truncated: bool) -> str | None:
+    """生成分页提示信息。
+    // Generate pagination note."""
     if truncated:
         if limit is None:
             return f"(pagination: offset={offset})"
@@ -78,6 +90,8 @@ def _pagination_note(limit: int | None, offset: int, truncated: bool) -> str | N
 
 
 def _matches_type(name: str, file_type: str | None) -> bool:
+    """检查文件名是否匹配文件类型。
+    // Check if filename matches file type."""
     if not file_type:
         return True
     lowered = file_type.strip().lower()
@@ -88,9 +102,13 @@ def _matches_type(name: str, file_type: str | None) -> bool:
 
 
 class _SearchTool(_FsTool):
+    """搜索工具基类。
+    // Base class for search tools."""
     _IGNORE_DIRS = set(ListDirTool._IGNORE_DIRS)
 
     def _display_path(self, target: Path, root: Path) -> str:
+        """获取相对路径显示字符串。
+        // Get relative path display string."""
         if self._workspace:
             try:
                 return target.relative_to(self._workspace).as_posix()
@@ -99,6 +117,8 @@ class _SearchTool(_FsTool):
         return target.relative_to(root).as_posix()
 
     def _iter_files(self, root: Path) -> Iterable[Path]:
+        """迭代目录下所有文件。
+        // Iterate all files in directory."""
         if root.is_file():
             yield root
             return
@@ -116,6 +136,8 @@ class _SearchTool(_FsTool):
         include_files: bool,
         include_dirs: bool,
     ) -> Iterable[Path]:
+        """迭代目录下的文件和/或子目录。
+        // Iterate files and/or subdirectories in directory."""
         if root.is_file():
             if include_files:
                 yield root
@@ -133,7 +155,9 @@ class _SearchTool(_FsTool):
 
 
 class GlobTool(_SearchTool):
-    """Find files matching a glob pattern."""
+    """Find files matching a glob pattern.
+    // 查找匹配 glob 模式的文件。
+    """
 
     @property
     def name(self) -> str:
@@ -251,7 +275,9 @@ class GlobTool(_SearchTool):
 
 
 class GrepTool(_SearchTool):
-    """Search file contents using a regex-like pattern."""
+    """Search file contents using a regex-like pattern.
+    // 使用正则表达式模式搜索文件内容。
+    """
     _MAX_RESULT_CHARS = 128_000
     _MAX_FILE_BYTES = 2_000_000
 
@@ -368,6 +394,8 @@ class GrepTool(_SearchTool):
         before: int,
         after: int,
     ) -> str:
+        """格式化匹配块，包含上下文行。
+        // Format match block with context lines."""
         start = max(1, match_line - before)
         end = min(len(lines), match_line + after)
         block = [f"{display_path}:{match_line}"]

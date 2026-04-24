@@ -1,4 +1,5 @@
 """GitHub Copilot OAuth-backed provider."""
+# GitHub Copilot OAuth 支持的提供者
 
 from __future__ import annotations
 
@@ -157,6 +158,7 @@ def login_github_copilot(
 
 class GitHubCopilotProvider(OpenAICompatProvider):
     """Provider that exchanges a stored GitHub OAuth token for Copilot access tokens."""
+    # 将存储的 GitHub OAuth 令牌交换为 Copilot 访问令牌的提供者
 
     def __init__(self, default_model: str = "github-copilot/gpt-4.1"):
         from nanobot.providers.registry import find_by_name

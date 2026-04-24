@@ -1,4 +1,6 @@
-"""Subagent manager for background task execution."""
+"""Subagent manager for background task execution.
+// 子代理管理器，用于后台任务执行。
+"""
 
 import asyncio
 import json
@@ -27,7 +29,9 @@ from nanobot.providers.base import LLMProvider
 
 @dataclass(slots=True)
 class SubagentStatus:
-    """Real-time status of a running subagent."""
+    """Real-time status of a running subagent.
+    // 运行中子代理的实时状态。
+    """
 
     task_id: str
     label: str
@@ -41,8 +45,12 @@ class SubagentStatus:
     error: str | None = None
 
 
+# 子代理执行的钩子——记录工具调用并更新状态
+# Hook for subagent execution — logs tool calls and updates status
 class _SubagentHook(AgentHook):
-    """Hook for subagent execution — logs tool calls and updates status."""
+    """Hook for subagent execution — logs tool calls and updates status.
+    // 子代理执行钩子——记录工具调用并更新状态。
+    """
 
     def __init__(self, task_id: str, status: SubagentStatus | None = None) -> None:
         super().__init__()
@@ -50,6 +58,8 @@ class _SubagentHook(AgentHook):
         self._status = status
 
     async def before_execute_tools(self, context: AgentHookContext) -> None:
+        """记录工具调用前的状态。
+        // Log status before tool execution."""
         for tool_call in context.tool_calls:
             args_str = json.dumps(tool_call.arguments, ensure_ascii=False)
             logger.debug(
@@ -58,6 +68,8 @@ class _SubagentHook(AgentHook):
             )
 
     async def after_iteration(self, context: AgentHookContext) -> None:
+        """迭代结束后更新状态。
+        // Update status after iteration completes."""
         if self._status is None:
             return
         self._status.iteration = context.iteration
@@ -68,7 +80,9 @@ class _SubagentHook(AgentHook):
 
 
 class SubagentManager:
-    """Manages background subagent execution."""
+    """Manages background subagent execution.
+    // 管理后台子代理执行。
+    """
 
     def __init__(
         self,
@@ -104,7 +118,8 @@ class SubagentManager:
         origin_chat_id: str = "direct",
         session_key: str | None = None,
     ) -> str:
-        """Spawn a subagent to execute a task in the background."""
+        """Spawn a subagent to execute a task in the background.
+        // 生成一个子代理在后台执行任务。"""
         task_id = str(uuid.uuid4())[:8]
         display_label = label or task[:30] + ("..." if len(task) > 30 else "")
         origin = {"channel": origin_channel, "chat_id": origin_chat_id, "session_key": session_key}
@@ -145,7 +160,8 @@ class SubagentManager:
         origin: dict[str, str],
         status: SubagentStatus,
     ) -> None:
-        """Execute the subagent task and announce the result."""
+        """Execute the subagent task and announce the result.
+        // 执行子代理任务并宣布结果。"""
         logger.info("Subagent [{}] starting task: {}", task_id, label)
 
         async def _on_checkpoint(payload: dict) -> None:
@@ -154,6 +170,7 @@ class SubagentManager:
 
         try:
             # Build subagent tools (no message tool, no spawn tool)
+            # 构建子代理工具（无消息工具、无生成工具）
             tools = ToolRegistry()
             allowed_dir = self.workspace if (self.restrict_to_workspace or self.exec_config.sandbox) else None
             extra_read = [BUILTIN_SKILLS_DIR] if allowed_dir else None
@@ -229,7 +246,8 @@ class SubagentManager:
         origin: dict[str, str],
         status: str,
     ) -> None:
-        """Announce the subagent result to the main agent via the message bus."""
+        """Announce the subagent result to the main agent via the message bus.
+        // 通过消息总线向主代理宣布子代理结果。"""
         status_text = "completed successfully" if status == "ok" else "failed"
 
         announce_content = render_template(
@@ -245,6 +263,8 @@ class SubagentManager:
         # session key (which accounts for unified sessions) so the result is
         # routed to the correct pending queue (mid-turn injection) instead of
         # being dispatched as a competing independent task.
+        # 作为系统消息注入以触发主代理。使用 session_key_override 与主代理的有效会话键对齐，
+        # 以便将结果路由到正确的待处理队列（轮次内注入），而不是作为竞争的独立任务进行调度。
         override = origin.get("session_key") or f"{origin['channel']}:{origin['chat_id']}"
         msg = InboundMessage(
             channel="system",
@@ -263,6 +283,8 @@ class SubagentManager:
 
     @staticmethod
     def _format_partial_progress(result) -> str:
+        """Format partial progress for error announcements.
+        // 为错误公告格式化部分进度。"""
         completed = [e for e in result.tool_events if e["status"] == "ok"]
         failure = next((e for e in reversed(result.tool_events) if e["status"] == "error"), None)
         lines: list[str] = []
@@ -283,7 +305,8 @@ class SubagentManager:
         return "\n".join(lines) or (result.error or "Error: subagent execution failed.")
 
     def _build_subagent_prompt(self) -> str:
-        """Build a focused system prompt for the subagent."""
+        """Build a focused system prompt for the subagent.
+        // 为子代理构建专注的系统提示。"""
         from nanobot.agent.context import ContextBuilder
         from nanobot.agent.skills import SkillsLoader
 
@@ -300,7 +323,8 @@ class SubagentManager:
         )
 
     async def cancel_by_session(self, session_key: str) -> int:
-        """Cancel all subagents for the given session. Returns count cancelled."""
+        """Cancel all subagents for the given session. Returns count cancelled.
+        // 取消给定会话的所有子代理。返回取消的数量。"""
         tasks = [self._running_tasks[tid] for tid in self._session_tasks.get(session_key, [])
                  if tid in self._running_tasks and not self._running_tasks[tid].done()]
         for t in tasks:
@@ -310,11 +334,13 @@ class SubagentManager:
         return len(tasks)
 
     def get_running_count(self) -> int:
-        """Return the number of currently running subagents."""
+        """Return the number of currently running subagents.
+        // 返回当前运行的子代理数量。"""
         return len(self._running_tasks)
 
     def get_running_count_by_session(self, session_key: str) -> int:
-        """Return the number of currently running subagents for a session."""
+        """Return the number of currently running subagents for a session.
+        // 返回某个会话当前运行的子代理数量。"""
         tids = self._session_tasks.get(session_key, set())
         return sum(
             1 for tid in tids

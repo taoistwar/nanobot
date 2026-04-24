@@ -1,4 +1,4 @@
-"""Document text extraction utilities for nanobot."""
+"""nanobot 文档文本提取工具模块。"""
 
 import mimetypes
 from pathlib import Path
@@ -61,14 +61,13 @@ _MAX_TEXT_LENGTH = 200_000
 
 
 def extract_text(path: Path) -> str | None:
-    """Extract text from a file.
+    """从文件中提取文本内容。
 
-    Args:
-        path: Path to the file.
+    参数:
+        path: 文件路径
 
-    Returns:
-        Extracted text as string, None for unsupported types,
-        or error string for failures.
+    返回:
+        提取的文本字符串，不支持的类型返回 None，失败时返回错误字符串。
     """
     if not isinstance(path, Path):
         path = Path(path)
@@ -106,7 +105,7 @@ def extract_text(path: Path) -> str | None:
 
 
 def _extract_pdf(path: Path) -> str:
-    """Extract text from PDF using pypdf."""
+    """使用 pypdf 库从 PDF 文件中提取文本。"""
     try:
         reader = PdfReader(path)
         pages: list[str] = []
@@ -120,7 +119,7 @@ def _extract_pdf(path: Path) -> str:
 
 
 def _extract_docx(path: Path) -> str:
-    """Extract text from DOCX using python-docx."""
+    """使用 python-docx 库从 DOCX 文件中提取文本。"""
     try:
         doc = DocxDocument(path)
         paragraphs: list[str] = [p.text for p in doc.paragraphs if p.text.strip()]
@@ -131,7 +130,7 @@ def _extract_docx(path: Path) -> str:
 
 
 def _extract_xlsx(path: Path) -> str:
-    """Extract text from XLSX using openpyxl."""
+    """使用 openpyxl 库从 XLSX 文件中提取文本。"""
     try:
         wb = load_workbook(path, read_only=True, data_only=True)
         try:
@@ -154,7 +153,7 @@ def _extract_xlsx(path: Path) -> str:
 
 
 def _extract_pptx(path: Path) -> str:
-    """Extract text from PPTX using python-pptx."""
+    """使用 python-pptx 库从 PPTX 文件中提取文本。"""
     try:
         prs = PptxPresentation(path)
         slides: list[str] = []
@@ -171,10 +170,10 @@ def _extract_pptx(path: Path) -> str:
 
 
 def _collect_pptx_shape_text(shape, out: list[str]) -> None:
-    """Collect text from a PPTX shape, recursing into groups and tables.
+    """从 PPTX 形状中收集文本，递归处理组合和表格。
 
-    Groups have ``has_text_frame=False`` and must be walked via ``.shapes``;
-    tables are GraphicFrame objects whose cell text lives under ``.table``.
+    组合形状的 ``has_text_frame=False``，需要通过 ``.shapes`` 遍历；
+    表格是 GraphicFrame 对象，其单元格文本位于 ``.table`` 下。
     """
     sub_shapes = getattr(shape, "shapes", None)
     if sub_shapes is not None:
@@ -196,7 +195,7 @@ def _collect_pptx_shape_text(shape, out: list[str]) -> None:
 
 
 def _extract_text_file(path: Path) -> str:
-    """Extract text from a plain text file."""
+    """从纯文本文件中提取内容。"""
     try:
         # Try UTF-8 first, then latin-1 fallback
         try:
@@ -210,14 +209,14 @@ def _extract_text_file(path: Path) -> str:
 
 
 def _truncate(text: str, max_length: int) -> str:
-    """Truncate text with a suffix indicating truncation."""
+    """截断文本并添加表示截断的后缀。"""
     if len(text) <= max_length:
         return text
     return text[:max_length] + f"... (truncated, {len(text)} chars total)"
 
 
 def _is_text_extension(ext: str) -> bool:
-    """Check if extension is a text format."""
+    """检查文件扩展名是否为文本格式。"""
     return ext in {
         ".txt",
         ".md",
@@ -248,15 +247,12 @@ def extract_documents(
     *,
     max_file_size: int = _MAX_EXTRACT_FILE_SIZE,
 ) -> tuple[str, list[str]]:
-    """Separate images from documents in *media_paths*.
+    """从 *media_paths* 中分离图片和文档。
 
-    Documents (PDF, DOCX, XLSX, PPTX, plain-text, …) have their text
-    extracted and appended to *text*.  Only image paths are kept in the
-    returned list so that downstream layers only need to handle vision
-    blocks.
+    文档（PDF、DOCX、XLSX、PPTX、纯文本等）的文本被提取并追加到 *text*。
+    返回的列表只包含图片路径，使下游层只需处理视觉块。
 
-    Files larger than *max_file_size* bytes are skipped with a warning
-    to avoid unbounded memory / CPU usage.
+    超过 *max_file_size* 字节的文件会被跳过并发出警告，以避免无限制的内存/CPU 使用。
     """
     image_paths: list[str] = []
     doc_texts: list[str] = []

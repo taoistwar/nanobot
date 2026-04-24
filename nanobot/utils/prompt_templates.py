@@ -1,8 +1,8 @@
-"""Load and render agent system prompt templates (Jinja2) under nanobot/templates/.
+"""加载和渲染 nanobot/templates/ 下的代理系统提示模板（Jinja2）。
 
-Agent prompts live in ``templates/agent/`` (pass names like ``agent/identity.md``).
-Shared copy lives under ``agent/_snippets/`` and is included via
-``{% include 'agent/_snippets/....md' %}``.
+代理提示位于 ``templates/agent/``（传入名称如 ``agent/identity.md``）。
+共享片段位于 ``agent/_snippets/``，通过
+``{% include 'agent/_snippets/....md' %}`` 引用。
 """
 
 from functools import lru_cache
@@ -16,7 +16,7 @@ _TEMPLATES_ROOT = Path(__file__).resolve().parent.parent / "templates"
 
 @lru_cache
 def _environment() -> Environment:
-    # Plain-text prompts: do not HTML-escape variable values.
+    # 纯文本提示：不 HTML 转义变量值
     return Environment(
         loader=FileSystemLoader(str(_TEMPLATES_ROOT)),
         autoescape=False,
@@ -26,10 +26,9 @@ def _environment() -> Environment:
 
 
 def render_template(name: str, *, strip: bool = False, **kwargs: Any) -> str:
-    """Render ``name`` (e.g. ``agent/identity.md``, ``agent/platform_policy.md``) under ``templates/``.
+    """渲染 ``templates/`` 下名为 ``name`` 的模板（如 ``agent/identity.md``）。
 
-    Use ``strip=True`` for single-line user-facing strings when the file ends
-    with a trailing newline you do not want preserved.
+    当文件以不需要保留的尾随换行符结尾时，对单行用户面向字符串使用 ``strip=True``。
     """
     text = _environment().get_template(name).render(**kwargs)
     return text.rstrip() if strip else text

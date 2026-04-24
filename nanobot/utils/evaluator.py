@@ -1,7 +1,7 @@
-"""Post-run evaluation for background tasks (heartbeat & cron).
+"""后台任务（心跳和定时任务）运行后的评估模块。
 
-After the agent executes a background task, this module makes a lightweight
-LLM call to decide whether the result warrants notifying the user.
+在代理执行后台任务后，本模块进行轻量级的 LLM 调用，
+以决定结果是否需要通知用户。
 """
 
 from __future__ import annotations
@@ -45,11 +45,10 @@ async def evaluate_response(
     provider: LLMProvider,
     model: str,
 ) -> bool:
-    """Decide whether a background-task result should be delivered to the user.
+    """决定后台任务结果是否应该发送给用户。
 
-    Uses a lightweight tool-call LLM request (same pattern as heartbeat
-    ``_decide()``).  Falls back to ``True`` (notify) on any failure so
-    that important messages are never silently dropped.
+    使用轻量级的工具调用 LLM 请求（与心跳 ``_decide()`` 相同的模式）。
+    任何失败时回退到 ``True``（通知），以确保重要消息不会被静默丢弃。
     """
     try:
         llm_response = await provider.chat_with_retry(

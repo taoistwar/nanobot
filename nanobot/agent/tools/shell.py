@@ -1,4 +1,5 @@
 """Shell execution tool."""
+// Shell 执行工具
 
 import asyncio
 import os
@@ -21,7 +22,9 @@ _IS_WINDOWS = sys.platform == "win32"
 @tool_parameters(
     tool_parameters_schema(
         command=StringSchema("The shell command to execute"),
+        // 要执行的 Shell 命令
         working_dir=StringSchema("Optional working directory for the command"),
+        // 命令的可选工作目录
         timeout=IntegerSchema(
             60,
             description=(
@@ -31,11 +34,13 @@ _IS_WINDOWS = sys.platform == "win32"
             minimum=1,
             maximum=600,
         ),
+        // 超时时间（秒），适用于编译、安装等长时间运行的命令（默认60，最大600）
         required=["command"],
     )
 )
 class ExecTool(Tool):
     """Tool to execute shell commands."""
+    // 执行 Shell 命令的工具
 
     def __init__(
         self,
@@ -48,6 +53,15 @@ class ExecTool(Tool):
         path_append: str = "",
         allowed_env_keys: list[str] | None = None,
     ):
+        // 初始化执行工具
+        // timeout: 命令超时时间，默认60秒
+        // working_dir: 工作目录
+        // deny_patterns: 禁止执行的危险命令模式列表
+        // allow_patterns: 允许执行的命令模式列表
+        // restrict_to_workspace: 是否限制在工作目录内
+        // sandbox: 沙箱配置
+        // path_append: 追加到 PATH 的路径
+        // allowed_env_keys: 允许传递给子进程的环境变量键
         self.timeout = timeout
         self.working_dir = working_dir
         self.sandbox = sandbox
@@ -77,13 +91,17 @@ class ExecTool(Tool):
 
     @property
     def name(self) -> str:
+        // 返回工具名称
         return "exec"
 
     _MAX_TIMEOUT = 600
+    // 最大超时时间（秒）
     _MAX_OUTPUT = 10_000
+    // 最大输出字符数
 
     @property
     def description(self) -> str:
+        // 返回工具描述
         return (
             "Execute a shell command and return its output. "
             "Prefer read_file/write_file/edit_file over cat/echo/sed, "
@@ -94,19 +112,22 @@ class ExecTool(Tool):
 
     @property
     def exclusive(self) -> bool:
+        // 是否为独占工具（同一时间只能运行一个实例）
         return True
 
     async def execute(
         self, command: str, working_dir: str | None = None,
         timeout: int | None = None, **kwargs: Any,
     ) -> str:
+        // 执行 Shell 命令并返回输出
+        // command: 要执行的命令
+        // working_dir: 工作目录（可选）
+        // timeout: 超时时间（可选）
         cwd = working_dir or self.working_dir or os.getcwd()
+        // 确定实际工作目录
 
-        # Prevent an LLM-supplied working_dir from escaping the configured
-        # workspace when restrict_to_workspace is enabled (#2826). Without
-        # this, a caller can pass working_dir="/etc" and then all absolute
-        # paths under /etc would pass the _guard_command check that anchors
-        # on cwd.
+        // 防止 LLM 提供的工作目录逃离配置的工作空间（#2826）
+        // 如果未做此检查，调用者可以传入 working_dir="/etc"，则 /etc 下的所有绝对路径都会通过检查
         if self.restrict_to_workspace and self.working_dir:
             try:
                 requested = Path(cwd).expanduser().resolve()
@@ -188,6 +209,7 @@ class ExecTool(Tool):
         command: str, cwd: str, env: dict[str, str],
     ) -> asyncio.subprocess.Process:
         """Launch *command* in a platform-appropriate shell."""
+        // 在适合平台的 shell 中启动命令
         if _IS_WINDOWS:
             comspec = env.get("COMSPEC", os.environ.get("COMSPEC", "cmd.exe"))
             return await asyncio.create_subprocess_exec(
@@ -209,6 +231,7 @@ class ExecTool(Tool):
     @staticmethod
     async def _kill_process(process: asyncio.subprocess.Process) -> None:
         """Kill a subprocess and reap it to prevent zombies."""
+        // 终止子进程并回收，防止僵尸进程
         process.kill()
         try:
             await asyncio.wait_for(process.wait(), timeout=5.0)
@@ -231,6 +254,10 @@ class ExecTool(Tool):
         set of system variables (including PATH) is forwarded.  API keys and
         other secrets are still excluded.
         """
+        // 为子进程执行构建最小化环境
+        // Unix 系统：只传递 HOME/LANG/TERM，bash -l 会加载用户的 profile 设置 PATH 等
+        // Windows 系统：cmd.exe 没有登录 profile 机制，所以转发一套系统变量（包括 PATH）
+        // API 密钥和其他 secrets 仍然被排除
         if _IS_WINDOWS:
             sr = os.environ.get("SYSTEMROOT", r"C:\Windows")
             env = {
@@ -269,27 +296,34 @@ class ExecTool(Tool):
 
     def _guard_command(self, command: str, cwd: str) -> str | None:
         """Best-effort safety guard for potentially destructive commands."""
+        // 对潜在危险命令进行安全检查
+        // 返回错误信息字符串表示命令被阻止，返回 None 表示允许执行
         cmd = command.strip()
         lower = cmd.lower()
 
+        // 检查是否匹配禁止模式
         for pattern in self.deny_patterns:
             if re.search(pattern, lower):
                 return "Error: Command blocked by safety guard (dangerous pattern detected)"
 
+        // 如果配置了允许模式，检查命令是否在允许列表中
         if self.allow_patterns:
             if not any(re.search(p, lower) for p in self.allow_patterns):
                 return "Error: Command blocked by safety guard (not in allowlist)"
 
+        // 检查命令是否包含内部/私有 URL
         from nanobot.security.network import contains_internal_url
         if contains_internal_url(cmd):
             return "Error: Command blocked by safety guard (internal/private URL detected)"
 
+        // 如果限制在工作空间内，检查路径遍历
         if self.restrict_to_workspace:
             if "..\\" in cmd or "../" in cmd:
                 return "Error: Command blocked by safety guard (path traversal detected)"
 
             cwd_path = Path(cwd).resolve()
 
+            // 提取并检查绝对路径
             for raw in self._extract_absolute_paths(cmd):
                 try:
                     expanded = os.path.expandvars(raw.strip())
@@ -310,9 +344,13 @@ class ExecTool(Tool):
 
     @staticmethod
     def _extract_absolute_paths(command: str) -> list[str]:
-        # Windows: match drive-root paths like `C:\` as well as `C:\path\to\file`
-        # NOTE: `*` is required so `C:\` (nothing after the slash) is still extracted.
+        // 从命令中提取绝对路径
+        // Windows: 匹配驱动器根路径如 `C:\` 以及 `C:\path\to\file`
+        // 注意: `*` 是必需的，这样 `C:\`（斜杠后无内容）也能被提取出来
         win_paths = re.findall(r"[A-Za-z]:\\[^\s\"'|><;]*", command)
+        // Windows 路径
         posix_paths = re.findall(r"(?:^|[\s|>'\"])(/[^\s\"'>;|<]+)", command) # POSIX: /absolute only
+        // POSIX 绝对路径
         home_paths = re.findall(r"(?:^|[\s|>'\"])(~[^\s\"'>;|<]*)", command) # POSIX/Windows home shortcut: ~
+        // POSIX/Windows home 快捷路径 (~)
         return win_paths + posix_paths + home_paths

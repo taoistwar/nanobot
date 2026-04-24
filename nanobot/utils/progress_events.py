@@ -1,4 +1,4 @@
-"""Structured progress-event helpers shared by agent runtimes."""
+"""代理运行时共享的结构化进度事件辅助工具模块。"""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from nanobot.agent.hook import AgentHookContext
 
 
 def on_progress_accepts_tool_events(cb: Callable[..., Any]) -> bool:
+    """检查回调函数是否接受 tool_events 参数。"""
     try:
         sig = inspect.signature(cb)
     except (TypeError, ValueError):
@@ -26,6 +27,7 @@ async def invoke_on_progress(
     tool_hint: bool = False,
     tool_events: list[dict[str, Any]] | None = None,
 ) -> None:
+    """调用进度回调函数，智能传递 tool_events 参数。"""
     if tool_events and on_progress_accepts_tool_events(on_progress):
         await on_progress(content, tool_hint=tool_hint, tool_events=tool_events)
         return
@@ -33,6 +35,7 @@ async def invoke_on_progress(
 
 
 def build_tool_event_start_payload(tool_call: Any) -> dict[str, Any]:
+    """构建工具事件开始阶段的载荷。"""
     return {
         "version": 1,
         "phase": "start",
@@ -47,6 +50,7 @@ def build_tool_event_start_payload(tool_call: Any) -> dict[str, Any]:
 
 
 def tool_event_result_extras(result: Any) -> tuple[list[Any], list[Any]]:
+    """从工具结果中提取文件和嵌入内容。"""
     if not isinstance(result, dict):
         return [], []
     files = result.get("files") if isinstance(result.get("files"), list) else []
@@ -55,6 +59,7 @@ def tool_event_result_extras(result: Any) -> tuple[list[Any], list[Any]]:
 
 
 def build_tool_event_finish_payloads(context: AgentHookContext) -> list[dict[str, Any]]:
+    """构建工具事件结束阶段的载荷列表。"""
     payloads: list[dict[str, Any]] = []
     count = min(len(context.tool_calls), len(context.tool_results), len(context.tool_events))
     for idx in range(count):

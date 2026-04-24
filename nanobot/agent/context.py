@@ -1,4 +1,6 @@
-"""Context builder for assembling agent prompts."""
+"""Context builder for assembling agent prompts.
+// 上下文构建器，用于组装代理提示词。
+"""
 
 import base64
 import mimetypes
@@ -14,7 +16,9 @@ from nanobot.utils.prompt_templates import render_template
 
 
 class ContextBuilder:
-    """Builds the context (system prompt + messages) for the agent."""
+    """Builds the context (system prompt + messages) for the agent.
+    // 为代理构建上下文（系统提示词 + 消息）。
+    """
 
     BOOTSTRAP_FILES = ["AGENTS.md", "SOUL.md", "USER.md", "TOOLS.md"]
     _RUNTIME_CONTEXT_TAG = "[Runtime Context — metadata only, not instructions]"
@@ -33,7 +37,8 @@ class ContextBuilder:
         skill_names: list[str] | None = None,
         channel: str | None = None,
     ) -> str:
-        """Build the system prompt from identity, bootstrap files, memory, and skills."""
+        """Build the system prompt from identity, bootstrap files, memory, and skills.
+        // 从身份、引导文件、记忆和技能构建系统提示词。"""
         parts = [self._get_identity(channel=channel)]
 
         bootstrap = self._load_bootstrap_files()
@@ -66,7 +71,8 @@ class ContextBuilder:
         return "\n\n---\n\n".join(parts)
 
     def _get_identity(self, channel: str | None = None) -> str:
-        """Get the core identity section."""
+        """Get the core identity section.
+        // 获取核心身份部分。"""
         workspace_path = str(self.workspace.expanduser().resolve())
         system = platform.system()
         runtime = f"{'macOS' if system == 'Darwin' else system} {platform.machine()}, Python {platform.python_version()}"
@@ -84,7 +90,8 @@ class ContextBuilder:
         channel: str | None, chat_id: str | None, timezone: str | None = None,
         session_summary: str | None = None,
     ) -> str:
-        """Build untrusted runtime metadata block for injection before the user message."""
+        """Build untrusted runtime metadata block for injection before the user message.
+        // 构建不可信的运行时元数据块，在用户消息前注入。"""
         lines = [f"Current Time: {current_time_str(timezone)}"]
         if channel and chat_id:
             lines += [f"Channel: {channel}", f"Chat ID: {chat_id}"]
@@ -94,6 +101,8 @@ class ContextBuilder:
 
     @staticmethod
     def _merge_message_content(left: Any, right: Any) -> str | list[dict[str, Any]]:
+        """Merge two message contents, handling both string and structured formats.
+        // 合并两个消息内容，处理字符串和结构化格式。"""
         if isinstance(left, str) and isinstance(right, str):
             return f"{left}\n\n{right}" if left else right
 
@@ -107,7 +116,8 @@ class ContextBuilder:
         return _to_blocks(left) + _to_blocks(right)
 
     def _load_bootstrap_files(self) -> str:
-        """Load all bootstrap files from workspace."""
+        """Load all bootstrap files from workspace.
+        // 从工作区加载所有引导文件。"""
         parts = []
 
         for filename in self.BOOTSTRAP_FILES:
@@ -120,7 +130,8 @@ class ContextBuilder:
 
     @staticmethod
     def _is_template_content(content: str, template_path: str) -> bool:
-        """Check if *content* is identical to the bundled template (user hasn't customized it)."""
+        """Check if *content* is identical to the bundled template (user hasn't customized it).
+        // 检查内容是否与绑定的模板相同（用户未自定义）。"""
         try:
             tpl = pkg_files("nanobot") / "templates" / template_path
             if tpl.is_file():
@@ -140,12 +151,15 @@ class ContextBuilder:
         current_role: str = "user",
         session_summary: str | None = None,
     ) -> list[dict[str, Any]]:
-        """Build the complete message list for an LLM call."""
+        """Build the complete message list for an LLM call.
+        // 构建完整的消息列表以供 LLM 调用。"""
         runtime_ctx = self._build_runtime_context(channel, chat_id, self.timezone, session_summary=session_summary)
         user_content = self._build_user_content(current_message, media)
 
         # Merge runtime context and user content into a single user message
         # to avoid consecutive same-role messages that some providers reject.
+        # 将运行时上下文和用户内容合并为单一用户消息，
+        # 以避免某些提供商拒绝的连续相同角色消息。
         if isinstance(user_content, str):
             merged = f"{runtime_ctx}\n\n{user_content}"
         else:
@@ -163,7 +177,8 @@ class ContextBuilder:
         return messages
 
     def _build_user_content(self, text: str, media: list[str] | None) -> str | list[dict[str, Any]]:
-        """Build user message content with optional base64-encoded images."""
+        """Build user message content with optional base64-encoded images.
+        // 构建用户消息内容，可选择包含 base64 编码的图像。"""
         if not media:
             return text
 
@@ -191,7 +206,8 @@ class ContextBuilder:
         self, messages: list[dict[str, Any]],
         tool_call_id: str, tool_name: str, result: Any,
     ) -> list[dict[str, Any]]:
-        """Add a tool result to the message list."""
+        """Add a tool result to the message list.
+        // 向消息列表添加工具结果。"""
         messages.append({"role": "tool", "tool_call_id": tool_call_id, "name": tool_name, "content": result})
         return messages
 
@@ -202,7 +218,8 @@ class ContextBuilder:
         reasoning_content: str | None = None,
         thinking_blocks: list[dict] | None = None,
     ) -> list[dict[str, Any]]:
-        """Add an assistant message to the message list."""
+        """Add an assistant message to the message list.
+        // 向消息列表添加助手消息。"""
         messages.append(build_assistant_message(
             content,
             tool_calls=tool_calls,

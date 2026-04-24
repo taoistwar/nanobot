@@ -1,4 +1,5 @@
 """Mochat channel implementation using Socket.IO with HTTP polling fallback."""
+// Mochat 频道实现，使用 Socket.IO 配合 HTTP 轮询降级方案
 
 from __future__ import annotations
 
@@ -227,6 +228,7 @@ class MochatGroupRule(Base):
 
 class MochatConfig(Base):
     """Mochat channel configuration."""
+    // Mochat 频道配置
 
     enabled: bool = False
     base_url: str = "https://mochat.io"
@@ -258,6 +260,7 @@ class MochatConfig(Base):
 
 class MochatChannel(BaseChannel):
     """Mochat channel using socket.io with fallback polling workers."""
+    // Mochat 频道，使用 socket.io 配合降级轮询工作器
 
     name = "mochat"
     display_name = "Mochat"

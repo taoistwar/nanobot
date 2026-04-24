@@ -1,4 +1,5 @@
 """Matrix (Element) channel — inbound sync + outbound message/media delivery."""
+// Matrix (Element) 频道 - 入站同步 + 出站消息/媒体传输
 
 import asyncio
 import json
@@ -201,6 +202,7 @@ def _configure_nio_logging_bridge() -> None:
 
 class MatrixConfig(Base):
     """Matrix (Element) channel configuration."""
+    // Matrix (Element) 频道配置
 
     enabled: bool = False
     homeserver: str = "https://matrix.org"
@@ -220,6 +222,7 @@ class MatrixConfig(Base):
 
 class MatrixChannel(BaseChannel):
     """Matrix (Element) channel using long-polling sync."""
+    // Matrix (Element) 频道，使用长轮询同步
 
     name = "matrix"
     display_name = "Matrix"

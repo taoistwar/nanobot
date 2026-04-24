@@ -1,4 +1,6 @@
-"""Message tool for sending messages to users."""
+"""Message tool for sending messages to users.
+// 消息工具，用于向用户发送消息。
+"""
 
 from contextvars import ContextVar
 from typing import Any, Awaitable, Callable
@@ -25,7 +27,9 @@ from nanobot.bus.events import OutboundMessage
     )
 )
 class MessageTool(Tool):
-    """Tool to send messages to users on chat channels."""
+    """Tool to send messages to users on chat channels.
+    // 在聊天频道向用户发送消息的工具。
+    """
 
     def __init__(
         self,
@@ -44,17 +48,20 @@ class MessageTool(Tool):
         self._sent_in_turn_var: ContextVar[bool] = ContextVar("message_sent_in_turn", default=False)
 
     def set_context(self, channel: str, chat_id: str, message_id: str | None = None) -> None:
-        """Set the current message context."""
+        """Set the current message context.
+        // 设置当前消息上下文。"""
         self._default_channel.set(channel)
         self._default_chat_id.set(chat_id)
         self._default_message_id.set(message_id)
 
     def set_send_callback(self, callback: Callable[[OutboundMessage], Awaitable[None]]) -> None:
-        """Set the callback for sending messages."""
+        """Set the callback for sending messages.
+        // 设置发送消息的回调函数。"""
         self._send_callback = callback
 
     def start_turn(self) -> None:
-        """Reset per-turn send tracking."""
+        """Reset per-turn send tracking.
+        // 重置每轮发送跟踪。"""
         self._sent_in_turn = False
 
     @property
@@ -106,6 +113,9 @@ class MessageTool(Tool):
         # some channels (e.g. Feishu) use it to determine the target
         # conversation via their Reply API, which would route the message
         # to the wrong chat entirely.
+        # 仅在同一 channel+chat 目标时继承默认 message_id。
+        # 跨聊天发送不得携带原始 message_id，因为某些频道（如飞书）使用它通过回复 API 确定目标对话，
+        # 这会完全将消息路由到错误的聊天。
         if channel == default_channel and chat_id == default_chat_id:
             message_id = message_id or self._default_message_id.get()
         else:

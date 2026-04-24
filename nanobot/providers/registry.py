@@ -9,6 +9,13 @@ Adding a new provider:
 Order matters — it controls match priority and fallback. Gateways first.
 Every entry writes out all fields so you can copy-paste as a template.
 """
+# 提供者注册表 - LLM提供者元数据的单一来源
+# 添加新提供者：
+#   1. 在下面的 PROVIDERS 中添加 ProviderSpec
+#   2. 在 config/schema.py 的 ProvidersConfig 中添加字段
+# 完成。环境变量、配置匹配、状态显示都来源于此
+# 顺序很重要 - 它控制匹配优先级和回退顺序。网关优先
+# 每个条目都写出所有字段，以便您可以作为模板复制粘贴
 
 from __future__ import annotations
 
@@ -21,56 +28,82 @@ from pydantic.alias_generators import to_snake
 @dataclass(frozen=True)
 class ProviderSpec:
     """One LLM provider's metadata. See PROVIDERS below for real examples.
+    # 单个LLM提供者的元数据。请参阅下面的PROVIDERS以获取实际示例
 
     Placeholders in env_extras values:
       {api_key}  — the user's API key
       {api_base} — api_base from config, or this spec's default_api_base
     """
+    # env_extras 值中的占位符：
+    #   {api_key}  - 用户的 API 密钥
+    #   {api_base} - 配置中的 api_base，或此规范的 default_api_base
 
     # identity
+    # 身份标识
     name: str  # config field name, e.g. "dashscope"
+    # 配置字段名，例如 "dashscope"
     keywords: tuple[str, ...]  # model-name keywords for matching (lowercase)
+    # 模型名称关键字，用于匹配（小写）
     env_key: str  # env var for API key, e.g. "DASHSCOPE_API_KEY"
+    # API 密钥的环境变量，例如 "DASHSCOPE_API_KEY"
     display_name: str = ""  # shown in `nanobot status`
+    # 在 `nanobot status` 中显示的名称
 
     # which provider implementation to use
+    # 使用哪个提供者实现
     # "openai_compat" | "anthropic" | "azure_openai" | "openai_codex" | "github_copilot"
     backend: str = "openai_compat"
 
     # extra env vars, e.g. (("ZHIPUAI_API_KEY", "{api_key}"),)
+    # 额外的环境变量，例如 (("ZHIPUAI_API_KEY", "{api_key}"),)
     env_extras: tuple[tuple[str, str], ...] = ()
 
     # gateway / local detection
+    # 网关/本地部署检测
     is_gateway: bool = False  # routes any model (OpenRouter, AiHubMix)
+    # 路由任何模型（OpenRouter、AiHubMix）
     is_local: bool = False  # local deployment (vLLM, Ollama)
+    # 本地部署（vLLM、Ollama）
     detect_by_key_prefix: str = ""  # match api_key prefix, e.g. "sk-or-"
+    # 匹配 api_key 前缀，例如 "sk-or-"
     detect_by_base_keyword: str = ""  # match substring in api_base URL
+    # 匹配 api_base URL 中的子字符串
     default_api_base: str = ""  # OpenAI-compatible base URL for this provider
+    # 此提供者的 OpenAI 兼容基础 URL
 
     # gateway behavior
+    # 网关行为
     strip_model_prefix: bool = False  # strip "provider/" before sending to gateway
+    # 在发送到网关前剥离 "provider/"
     supports_max_completion_tokens: bool = False
+    # 支持 max_completion_tokens
 
     # per-model param overrides, e.g. (("kimi-k2.5", {"temperature": 1.0}),)
+    # 每个模型的参数覆盖，例如 (("kimi-k2.5", {"temperature": 1.0}),)
     model_overrides: tuple[tuple[str, dict[str, Any]], ...] = ()
 
     # OAuth-based providers (e.g., OpenAI Codex) don't use API keys
+    # 基于 OAuth 的提供者（如 OpenAI Codex）不使用 API 密钥
     is_oauth: bool = False
 
     # Direct providers skip API-key validation (user supplies everything)
+    # 直接提供者跳过 API 密钥验证（用户提供所有内容）
     is_direct: bool = False
 
     # Provider supports cache_control on content blocks (e.g. Anthropic prompt caching)
+    # 提供者支持在内容块上使用 cache_control（例如 Anthropic 提示缓存）
     supports_prompt_caching: bool = False
 
     @property
     def label(self) -> str:
+        # 返回显示名称，如果未设置则使用名称的标题格式
         return self.display_name or self.name.title()
 
 
 # ---------------------------------------------------------------------------
 # PROVIDERS — the registry. Order = priority. Copy any entry as template.
 # ---------------------------------------------------------------------------
+# 提供者注册表。顺序 = 优先级。复制任何条目作为模板。
 
 PROVIDERS: tuple[ProviderSpec, ...] = (
     # === Custom (direct OpenAI-compatible endpoint) ========================
@@ -388,10 +421,12 @@ PROVIDERS: tuple[ProviderSpec, ...] = (
 # ---------------------------------------------------------------------------
 # Lookup helpers
 # ---------------------------------------------------------------------------
+# 查找辅助函数
 
 
 def find_by_name(name: str) -> ProviderSpec | None:
     """Find a provider spec by config field name, e.g. "dashscope"."""
+    # 根据配置字段名查找提供者规范，例如 "dashscope"
     normalized = to_snake(name.replace("-", "_"))
     for spec in PROVIDERS:
         if spec.name == normalized:

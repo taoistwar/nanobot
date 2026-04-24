@@ -1,4 +1,7 @@
-"""Base LLM provider interface."""
+"""
+Base LLM provider interface.
+LLM Provider 基类接口。
+"""
 
 import asyncio
 import json
@@ -17,7 +20,10 @@ from nanobot.utils.helpers import image_placeholder_text
 
 @dataclass
 class ToolCallRequest:
-    """A tool call request from the LLM."""
+    """
+    A tool call request from the LLM.
+    来自 LLM 的工具调用请求。
+    """
     id: str
     name: str
     arguments: dict[str, Any]
@@ -26,7 +32,10 @@ class ToolCallRequest:
     function_provider_specific_fields: dict[str, Any] | None = None
 
     def to_openai_tool_call(self) -> dict[str, Any]:
-        """Serialize to an OpenAI-style tool_call payload."""
+        """
+        Serialize to an OpenAI-style tool_call payload.
+        序列化为 OpenAI 风格的 tool_call 数据。
+        """
         tool_call = {
             "id": self.id,
             "type": "function",
@@ -46,31 +55,42 @@ class ToolCallRequest:
 
 @dataclass
 class LLMResponse:
-    """Response from an LLM provider."""
+    """
+    Response from an LLM provider.
+    LLM Provider 的响应。
+    """
     content: str | None
     tool_calls: list[ToolCallRequest] = field(default_factory=list)
     finish_reason: str = "stop"
     usage: dict[str, int] = field(default_factory=dict)
-    retry_after: float | None = None  # Provider supplied retry wait in seconds.
-    reasoning_content: str | None = None  # Kimi, DeepSeek-R1, MiMo etc.
-    thinking_blocks: list[dict] | None = None  # Anthropic extended thinking
+    retry_after: float | None = None  # Provider supplied retry wait in seconds. / Provider 提供的重试等待时间（秒）。
+    reasoning_content: str | None = None  # Kimi, DeepSeek-R1, MiMo etc. / 推理内容（Kimi、DeepSeek-R1、MiMo 等）。
+    thinking_blocks: list[dict] | None = None  # Anthropic extended thinking / Anthropic 扩展思考块
     # Structured error metadata used by retry policy when finish_reason == "error".
+    # 当 finish_reason == "error" 时使用的结构化错误元数据。
     error_status_code: int | None = None
-    error_kind: str | None = None  # e.g. "timeout", "connection"
-    error_type: str | None = None  # Provider/type semantic, e.g. insufficient_quota.
-    error_code: str | None = None  # Provider/code semantic, e.g. rate_limit_exceeded.
+    error_kind: str | None = None  # e.g. "timeout", "connection" / 例如 "timeout"、"connection"
+    error_type: str | None = None  # Provider/type semantic, e.g. insufficient_quota. / Provider/类型语义，例如 insufficient_quota
+    error_code: str | None = None  # Provider/code semantic, e.g. rate_limit_exceeded. / Provider/代码语义，例如 rate_limit_exceeded
     error_retry_after_s: float | None = None
     error_should_retry: bool | None = None
 
     @property
     def has_tool_calls(self) -> bool:
-        """Check if response contains tool calls."""
+        """
+        Check if response contains tool calls.
+        检查响应是否包含工具调用。
+        """
         return len(self.tool_calls) > 0
 
     @property
     def should_execute_tools(self) -> bool:
-        """Tools execute only when has_tool_calls AND finish_reason is ``tool_calls`` / ``stop``.
-        Blocks gateway-injected calls under ``refusal`` / ``content_filter`` / ``error`` (#3220)."""
+        """
+        Tools execute only when has_tool_calls AND finish_reason is ``tool_calls`` / ``stop``.
+        Blocks gateway-injected calls under ``refusal`` / ``content_filter`` / ``error`` (#3220).
+        仅当 has_tool_calls 为真且 finish_reason 为 ``tool_calls`` / ``stop`` 时才执行工具。
+        阻止网关注入的 ``refusal`` / ``content_filter`` / ``error`` 情况下的调用。
+        """
         if not self.has_tool_calls:
             return False
         return self.finish_reason in ("tool_calls", "stop")
@@ -78,13 +98,18 @@ class LLMResponse:
 
 @dataclass(frozen=True)
 class GenerationSettings:
-    """Default generation settings."""
+    """
+    Default generation settings.
+    默认生成设置。
+    """
 
     temperature: float = 0.7
     max_tokens: int = 4096
     reasoning_effort: str | None = None
 
 
+# 用于对话继续的合成用户消息内容
+# Synthetic user message content for conversation continuation
 _SYNTHETIC_USER_CONTENT = "(conversation continued)"
 
 

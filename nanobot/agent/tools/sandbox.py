@@ -1,8 +1,11 @@
 """Sandbox backends for shell command execution.
+// Shell 命令执行的沙箱后端。
 
 To add a new backend, implement a function with the signature:
     _wrap_<name>(command: str, workspace: str, cwd: str) -> str
 and register it in _BACKENDS below.
+// 要添加新的后端，实现一个签名为 _wrap_<name>(command: str, workspace: str, cwd: str) -> str 的函数，
+// 并在 _BACKENDS 中注册它。
 """
 
 import shlex
@@ -13,10 +16,13 @@ from nanobot.config.paths import get_media_dir
 
 def _bwrap(command: str, workspace: str, cwd: str) -> str:
     """Wrap command in a bubblewrap sandbox (requires bwrap in container).
+    // 在 bubblewrap 沙箱中包装命令（需要容器中有 bwrap）。
 
     Only the workspace is bind-mounted read-write; its parent dir (which holds
     config.json) is hidden behind a fresh tmpfs.  The media directory is
     bind-mounted read-only so exec commands can read uploaded attachments.
+    // 只有工作区以读写方式绑定挂载；其父目录（包含 config.json）被新的 tmpfs 隐藏。
+    // 媒体目录以只读方式绑定挂载，以便 exec 命令能读取上传的附件。
     """
     ws = Path(workspace).resolve()
     media = get_media_dir().resolve()
@@ -49,7 +55,8 @@ _BACKENDS = {"bwrap": _bwrap}
 
 
 def wrap_command(sandbox: str, command: str, workspace: str, cwd: str) -> str:
-    """Wrap *command* using the named sandbox backend."""
+    """Wrap *command* using the named sandbox backend.
+    // 使用命名的沙箱后端包装命令。"""
     if backend := _BACKENDS.get(sandbox):
         return backend(command, workspace, cwd)
     raise ValueError(f"Unknown sandbox backend {sandbox!r}. Available: {list(_BACKENDS)}")

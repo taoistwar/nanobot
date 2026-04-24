@@ -21,7 +21,10 @@ from nanobot.utils.helpers import (
 
 @dataclass
 class Session:
-    """A conversation session."""
+    """A conversation session.
+    
+    表示一个对话会话的数据类，包含消息历史、会话元数据等信息。
+    """
 
     key: str  # channel:chat_id
     messages: list[dict[str, Any]] = field(default_factory=list)
@@ -31,7 +34,15 @@ class Session:
     last_consolidated: int = 0  # Number of messages already consolidated to files
 
     def add_message(self, role: str, content: str, **kwargs: Any) -> None:
-        """Add a message to the session."""
+        """Add a message to the session.
+        
+        向会话添加一条消息，包括角色、内容、时间戳等信息。
+        
+        Args:
+            role: 消息角色，如 'user' 或 'assistant'
+            content: 消息内容
+            **kwargs: 其他可选参数
+        """
         msg = {
             "role": role,
             "content": content,
@@ -42,7 +53,16 @@ class Session:
         self.updated_at = datetime.now()
 
     def get_history(self, max_messages: int = 500) -> list[dict[str, Any]]:
-        """Return unconsolidated messages for LLM input, aligned to a legal tool-call boundary."""
+        """Return unconsolidated messages for LLM input, aligned to a legal tool-call boundary.
+        
+        返回未整合的消息列表，用于 LLM 输入。会对齐到合法的工具调用边界。
+        
+        Args:
+            max_messages: 返回的最大消息数量
+            
+        Returns:
+            消息列表，每条消息包含 role 和 content
+        """
         unconsolidated = self.messages[self.last_consolidated:]
         sliced = unconsolidated[-max_messages:]
 
@@ -79,13 +99,23 @@ class Session:
         return out
 
     def clear(self) -> None:
-        """Clear all messages and reset session to initial state."""
+        """Clear all messages and reset session to initial state.
+        
+        清除所有消息并将会话重置为初始状态。
+        """
         self.messages = []
         self.last_consolidated = 0
         self.updated_at = datetime.now()
 
     def retain_recent_legal_suffix(self, max_messages: int) -> None:
-        """Keep a legal recent suffix, mirroring get_history boundary rules."""
+        """Keep a legal recent suffix, mirroring get_history boundary rules.
+        
+        保留一个合法的最近消息后缀，遵循 get_history 的边界规则。
+        如果截断点落在用户消息之前，会自动向前延伸以避免截断用户回合。
+        
+        Args:
+            max_messages: 保留的最大消息数量
+        """
         if max_messages <= 0:
             self.clear()
             return
@@ -116,9 +146,17 @@ class SessionManager:
     Manages conversation sessions.
 
     Sessions are stored as JSONL files in the sessions directory.
+    
+    会话管理器，负责会话的创建、加载、保存和删除。
+    会话以 JSONL 格式存储在 sessions 目录中。
     """
 
     def __init__(self, workspace: Path):
+        """Initialize the session manager.
+        
+        Args:
+            workspace: 工作区路径，用于存储会话文件
+        """
         self.workspace = workspace
         self.sessions_dir = ensure_dir(self.workspace / "sessions")
         self.legacy_sessions_dir = get_legacy_sessions_dir()
@@ -126,15 +164,42 @@ class SessionManager:
 
     @staticmethod
     def safe_key(key: str) -> str:
-        """Public helper used by HTTP handlers to map an arbitrary key to a stable filename stem."""
+        """Public helper used by HTTP handlers to map an arbitrary key to a stable filename stem.
+        
+        将任意键映射为稳定的文件名 Stem，用于 HTTP 处理器。
+        
+        Args:
+            key: 原始会话键
+            
+        Returns:
+            安全的文件名 Stem
+        """
         return safe_filename(key.replace(":", "_"))
 
     def _get_session_path(self, key: str) -> Path:
-        """Get the file path for a session."""
+        """Get the file path for a session.
+        
+        获取会话对应的文件路径。
+        
+        Args:
+            key: 会话键
+            
+        Returns:
+            会话文件路径
+        """
         return self.sessions_dir / f"{self.safe_key(key)}.jsonl"
 
     def _get_legacy_session_path(self, key: str) -> Path:
-        """Legacy global session path (~/.nanobot/sessions/)."""
+        """Legacy global session path (~/.nanobot/sessions/).
+        
+        获取旧版全局会话路径 (~/.nanobot/sessions/)，用于迁移旧数据。
+        
+        Args:
+            key: 会话键
+            
+        Returns:
+            旧版会话文件路径
+        """
         return self.legacy_sessions_dir / f"{self.safe_key(key)}.jsonl"
 
     def get_or_create(self, key: str) -> Session:
@@ -146,6 +211,9 @@ class SessionManager:
 
         Returns:
             The session.
+            
+        获取现有会话或创建新会话。如果会话已缓存则直接返回，
+        否则从磁盘加载或创建新的 Session 对象。
         """
         if key in self._cache:
             return self._cache[key]
@@ -158,7 +226,17 @@ class SessionManager:
         return session
 
     def _load(self, key: str) -> Session | None:
-        """Load a session from disk."""
+        """Load a session from disk.
+        
+        从磁盘加载会话。会尝试从当前路径加载，
+        如果不存在则尝试从旧路径迁移。
+        
+        Args:
+            key: 会话键
+            
+        Returns:
+            加载的会话对象，加载失败返回 None
+        """
         path = self._get_session_path(key)
         if not path.exists():
             legacy_path = self._get_legacy_session_path(key)
@@ -211,7 +289,17 @@ class SessionManager:
             return repaired
 
     def _repair(self, key: str) -> Session | None:
-        """Attempt to recover a session from a corrupt JSONL file."""
+        """Attempt to recover a session from a corrupt JSONL file.
+        
+        尝试从损坏的 JSONL 文件中恢复会话。跳过损坏的行，
+        尽可能多地恢复有效数据。
+        
+        Args:
+            key: 会话键
+            
+        Returns:
+            恢复的会话对象，恢复失败返回 None
+        """
         path = self._get_session_path(key)
         if not path.exists():
             return None
@@ -288,6 +376,10 @@ class SessionManager:
         should be enabled during graceful shutdown so that filesystems with
         write-back caching (e.g. rclone VFS, NFS, FUSE mounts) do not lose
         the most recent writes.
+        
+        将会话原子性地保存到磁盘。使用写临时文件再重命名的
+        方式确保原子性。当 fsync 为 True 时，会将文件同步到
+        持久存储。
         """
         path = self._get_session_path(session.key)
         tmp_path = path.with_suffix(".jsonl.tmp")
@@ -336,6 +428,12 @@ class SessionManager:
         Returns the number of sessions flushed.  Errors on individual
         sessions are logged but do not prevent other sessions from being
         flushed.
+        
+        重新保存所有缓存的会话并使用 fsync 确保持久化。
+        返回保存的会话数量，单个会话的错误不会影响其他会话。
+        
+        Returns:
+            成功保存的会话数量
         """
         flushed = 0
         for key, session in list(self._cache.items()):
@@ -347,13 +445,27 @@ class SessionManager:
         return flushed
 
     def invalidate(self, key: str) -> None:
-        """Remove a session from the in-memory cache."""
+        """Remove a session from the in-memory cache.
+        
+        从内存缓存中移除会话。
+        
+        Args:
+            key: 会话键
+        """
         self._cache.pop(key, None)
 
     def delete_session(self, key: str) -> bool:
         """Remove a session from disk and the in-memory cache.
 
         Returns True if a JSONL file was found and unlinked.
+        
+        从磁盘和内存缓存中删除会话。
+        
+        Args:
+            key: 会话键
+            
+        Returns:
+            是否成功删除文件
         """
         path = self._get_session_path(key)
         self.invalidate(key)
@@ -371,6 +483,14 @@ class SessionManager:
 
         Returns ``{"key", "created_at", "updated_at", "metadata", "messages"}`` or
         ``None`` when the session file does not exist or fails to parse.
+        
+        从磁盘加载会话但不缓存，用于只读的 HTTP 端点。
+        
+        Args:
+            key: 会话键
+            
+        Returns:
+            会话数据字典，加载失败返回 None
         """
         path = self._get_session_path(key)
         if not path.exists():
@@ -415,6 +535,11 @@ class SessionManager:
 
         Returns:
             List of session info dicts.
+            
+        列出所有会话，按更新时间倒序排列。
+        
+        Returns:
+            会话信息字典列表
         """
         sessions = []
 

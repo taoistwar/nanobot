@@ -1,12 +1,17 @@
 """JSON Schema fragment types: all subclass :class:`~nanobot.agent.tools.base.Schema` for descriptions and constraints on tool parameters.
+// JSON Schema 片段类型：全部继承自 nanobot.agent.tools.base.Schema，用于描述和约束工具参数。
 
 - ``to_json_schema()``: returns a dict compatible with :meth:`~nanobot.agent.tools.base.Schema.validate_json_schema_value` /
   :class:`~nanobot.agent.tools.base.Tool`.
+  // 返回与 validate_json_schema_value / Tool 兼容的字典。
 - ``validate_value(value, path)``: validates a single value against this schema; returns a list of error messages (empty means valid).
+  // 根据此 schema 验证单个值；返回错误消息列表（空意味着有效）。
 
 Shared validation and fragment normalization are on the class methods of :class:`~nanobot.agent.tools.base.Schema`.
+// 共享验证和片段规范化在 nanobot.agent.tools.base.Schema 的类方法中。
 
 Note: Python does not allow subclassing ``bool``, so booleans use :class:`BooleanSchema`.
+// 注意：Python 不允许子类化 bool，所以布尔值使用 BooleanSchema。
 """
 
 from __future__ import annotations
@@ -18,7 +23,9 @@ from nanobot.agent.tools.base import Schema
 
 
 class StringSchema(Schema):
-    """String parameter: ``description`` documents the field; optional length bounds and enum."""
+    """String parameter: ``description`` documents the field; optional length bounds and enum.
+    // 字符串参数：description 记录字段；可选长度限制和枚举。
+    """
 
     def __init__(
         self,
@@ -52,7 +59,9 @@ class StringSchema(Schema):
 
 
 class IntegerSchema(Schema):
-    """Integer parameter: optional placeholder int (legacy ctor signature), description, and bounds."""
+    """Integer parameter: optional placeholder int (legacy ctor signature), description, and bounds.
+    // 整数参数：可选的占位符 int（旧构造函数签名）、描述和边界。
+    """
 
     def __init__(
         self,
@@ -88,7 +97,9 @@ class IntegerSchema(Schema):
 
 
 class NumberSchema(Schema):
-    """Numeric parameter (JSON number): description and optional bounds."""
+    """Numeric parameter (JSON number): description and optional bounds.
+    // 数字参数（JSON 数字）：描述和可选边界。
+    """
 
     def __init__(
         self,
@@ -124,7 +135,9 @@ class NumberSchema(Schema):
 
 
 class BooleanSchema(Schema):
-    """Boolean parameter (standalone class because Python forbids subclassing ``bool``)."""
+    """Boolean parameter (standalone class because Python forbids subclassing ``bool``).
+    // 布尔参数（独立类，因为 Python 禁止子类化 bool）。
+    """
 
     def __init__(
         self,
@@ -150,7 +163,9 @@ class BooleanSchema(Schema):
 
 
 class ArraySchema(Schema):
-    """Array parameter: element schema is given by ``items``."""
+    """Array parameter: element schema is given by ``items``.
+    // 数组参数：元素 schema 由 items 指定。
+    """
 
     def __init__(
         self,
@@ -185,7 +200,9 @@ class ArraySchema(Schema):
 
 
 class ObjectSchema(Schema):
-    """Object parameter: ``properties`` or keyword args are field names; values are child Schema or JSON Schema dicts."""
+    """Object parameter: ``properties`` or keyword args are field names; values are child Schema or JSON Schema dicts.
+    // 对象参数：properties 或关键字参数是字段名；值是子 Schema 或 JSON Schema 字典。
+    """
 
     def __init__(
         self,
@@ -224,7 +241,8 @@ def tool_parameters_schema(
     description: str = "",
     **properties: Any,
 ) -> dict[str, Any]:
-    """Build root tool parameters ``{"type": "object", "properties": ...}`` for :meth:`Tool.parameters`."""
+    """Build root tool parameters ``{"type": "object", "properties": ...}`` for :meth:`Tool.parameters`.
+    // 构建工具根参数 {"type": "object", "properties": ...} 用于 Tool.parameters。"""
     return ObjectSchema(
         required=required,
         description=description,

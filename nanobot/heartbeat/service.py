@@ -1,4 +1,5 @@
-"""Heartbeat service - periodic agent wake-up to check for tasks."""
+"""Heartbeat service - periodic agent wake-up to check for tasks.
+心跳服务 - 定期唤醒 Agent 检查任务。"""
 
 from __future__ import annotations
 
@@ -40,14 +41,19 @@ _HEARTBEAT_TOOL = [
 class HeartbeatService:
     """
     Periodic heartbeat service that wakes the agent to check for tasks.
+    定期心跳服务，唤醒 Agent 检查是否有任务。
 
     Phase 1 (decision): reads HEARTBEAT.md and asks the LLM — via a virtual
     tool call — whether there are active tasks.  This avoids free-text parsing
     and the unreliable HEARTBEAT_OK token.
+    第一阶段（决策）：读取 HEARTBEAT.md，通过虚拟工具调用询问 LLM 是否有活跃任务。
+    这避免了自由文本解析和不可靠的 HEARTBEAT_OK token。
 
     Phase 2 (execution): only triggered when Phase 1 returns ``run``.  The
     ``on_execute`` callback runs the task through the full agent loop and
     returns the result to deliver.
+    第二阶段（执行）：仅在第一阶段返回 ``run`` 时触发。``on_execute`` 回调
+    通过完整的 agent loop 运行任务并返回结果。
     """
 
     def __init__(
@@ -74,9 +80,11 @@ class HeartbeatService:
 
     @property
     def heartbeat_file(self) -> Path:
+        """心跳文件路径。"""
         return self.workspace / "HEARTBEAT.md"
 
     def _read_heartbeat_file(self) -> str | None:
+        """读取心跳文件内容。"""
         if self.heartbeat_file.exists():
             try:
                 return self.heartbeat_file.read_text(encoding="utf-8")
@@ -86,8 +94,10 @@ class HeartbeatService:
 
     async def _decide(self, content: str) -> tuple[str, str]:
         """Phase 1: ask LLM to decide skip/run via virtual tool call.
+        第一阶段：通过虚拟工具调用让 LLM 决定跳过或执行。
 
         Returns (action, tasks) where action is 'skip' or 'run'.
+        返回 (动作, 任务)，其中动作是 'skip' 或 'run'。
         """
         from nanobot.utils.helpers import current_time_str
 
@@ -116,7 +126,8 @@ class HeartbeatService:
         return args.get("action", "skip"), args.get("tasks", "")
 
     async def start(self) -> None:
-        """Start the heartbeat service."""
+        """Start the heartbeat service.
+        启动心跳服务。"""
         if not self.enabled:
             logger.info("Heartbeat disabled")
             return
@@ -129,14 +140,16 @@ class HeartbeatService:
         logger.info("Heartbeat started (every {}s)", self.interval_s)
 
     def stop(self) -> None:
-        """Stop the heartbeat service."""
+        """Stop the heartbeat service.
+        停止心跳服务。"""
         self._running = False
         if self._task:
             self._task.cancel()
             self._task = None
 
     async def _run_loop(self) -> None:
-        """Main heartbeat loop."""
+        """Main heartbeat loop.
+        心跳主循环。"""
         while self._running:
             try:
                 await asyncio.sleep(self.interval_s)
@@ -148,7 +161,8 @@ class HeartbeatService:
                 logger.error("Heartbeat error: {}", e)
 
     async def _tick(self) -> None:
-        """Execute a single heartbeat tick."""
+        """Execute a single heartbeat tick.
+        执行单次心跳检查。"""
         from nanobot.utils.evaluator import evaluate_response
 
         content = self._read_heartbeat_file()
@@ -182,7 +196,8 @@ class HeartbeatService:
             logger.exception("Heartbeat execution failed")
 
     async def trigger_now(self) -> str | None:
-        """Manually trigger a heartbeat."""
+        """Manually trigger a heartbeat.
+        手动触发一次心跳。"""
         content = self._read_heartbeat_file()
         if not content:
             return None

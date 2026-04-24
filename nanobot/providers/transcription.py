@@ -1,4 +1,5 @@
 """Voice transcription providers (Groq and OpenAI Whisper)."""
+# 语音转录提供者（Groq 和 OpenAI Whisper）
 
 import os
 from pathlib import Path
@@ -9,6 +10,7 @@ from loguru import logger
 
 class OpenAITranscriptionProvider:
     """Voice transcription provider using OpenAI's Whisper API."""
+    # 使用 OpenAI Whisper API 的语音转录提供者
 
     def __init__(
         self,
@@ -52,8 +54,10 @@ class OpenAITranscriptionProvider:
 class GroqTranscriptionProvider:
     """
     Voice transcription provider using Groq's Whisper API.
+    # 使用 Groq Whisper API 的语音转录提供者
 
     Groq offers extremely fast transcription with a generous free tier.
+    # Groq 提供极快的转录速度，并有慷慨的免费额度
     """
 
     def __init__(

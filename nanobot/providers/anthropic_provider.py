@@ -1,4 +1,5 @@
 """Anthropic provider — direct SDK integration for Claude models."""
+# Anthropic 提供者 - Claude 模型的直接 SDK 集成
 
 from __future__ import annotations
 
@@ -23,10 +24,14 @@ def _gen_tool_id() -> str:
 
 class AnthropicProvider(LLMProvider):
     """LLM provider using the native Anthropic SDK for Claude models.
+    # 使用原生 Anthropic SDK 的 LLM 提供者，用于 Claude 模型
 
     Handles message format conversion (OpenAI → Anthropic Messages API),
+    # 处理消息格式转换（OpenAI → Anthropic Messages API）
     prompt caching, extended thinking, tool calls, and streaming.
+    # 提示缓存、扩展思考、工具调用和流式处理
     """
+    # 支持：消息格式转换、提示缓存、扩展思考、工具调用和流式处理
 
     def __init__(
         self,
@@ -35,6 +40,12 @@ class AnthropicProvider(LLMProvider):
         default_model: str = "claude-sonnet-4-20250514",
         extra_headers: dict[str, str] | None = None,
     ):
+        # 初始化 Anthropic 提供者
+        # 参数：
+        #   api_key: Anthropic API 密钥
+        #   api_base: API 基础 URL（可选）
+        #   default_model: 默认模型名称
+        #   extra_headers: 额外的 HTTP 头
         super().__init__(api_key, api_base)
         self.default_model = default_model
         self.extra_headers = extra_headers or {}
@@ -49,6 +60,7 @@ class AnthropicProvider(LLMProvider):
         if extra_headers:
             client_kw["default_headers"] = extra_headers
         # Keep retries centralized in LLMProvider._run_with_retry to avoid retry amplification.
+        # 将重试集中在 LLMProvider._run_with_retry 中以避免重试放大
         client_kw["max_retries"] = 0
         self._client = AsyncAnthropic(**client_kw)
 
@@ -117,11 +129,14 @@ class AnthropicProvider(LLMProvider):
     # ------------------------------------------------------------------
     # Message conversion: OpenAI chat format → Anthropic Messages API
     # ------------------------------------------------------------------
+    # 消息转换：OpenAI 聊天格式 → Anthropic Messages API
 
     def _convert_messages(
         self, messages: list[dict[str, Any]],
     ) -> tuple[str | list[dict[str, Any]], list[dict[str, Any]]]:
         """Return ``(system, anthropic_messages)``."""
+        # 将 OpenAI 格式的消息转换为 Anthropic 格式
+        # 返回 (system, anthropic_messages) 元组
         system: str | list[dict[str, Any]] = ""
         raw: list[dict[str, Any]] = []
 
@@ -162,6 +177,7 @@ class AnthropicProvider(LLMProvider):
 
     @staticmethod
     def _tool_result_block(msg: dict[str, Any]) -> dict[str, Any]:
+        # 将工具结果消息转换为 Anthropic 工具结果块
         content = msg.get("content")
         block: dict[str, Any] = {
             "type": "tool_result",
@@ -213,6 +229,7 @@ class AnthropicProvider(LLMProvider):
     @staticmethod
     def _convert_user_content(content: Any) -> Any:
         """Convert user message content, translating image_url blocks."""
+        # 转换用户消息内容，包括 image_url 块的转换
         if isinstance(content, str) or content is None:
             return content or "(empty)"
         if not isinstance(content, list):
@@ -251,9 +268,12 @@ class AnthropicProvider(LLMProvider):
     @staticmethod
     def _has_tool_use(msg: dict[str, Any]) -> bool:
         """True if ``msg.content`` carries any ``tool_use`` block.
+        # 如果消息内容包含 tool_use 块则返回 True
 
         Anthropic forbids ``tool_use`` inside ``user`` turns, so messages that
+        # Anthropic 禁止在 user 回合中使用 tool_use，因此发送过工具调用的消息
         issued a tool call cannot be safely rerouted when we patch the role.
+        # 在修改角色时无法安全地重新路由
         """
         content = msg.get("content")
         if not isinstance(content, list):
@@ -266,22 +286,20 @@ class AnthropicProvider(LLMProvider):
     @staticmethod
     def _merge_consecutive(msgs: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Normalize a message sequence for Anthropic's ``/messages`` endpoint.
+        # 规范化消息序列以符合 Anthropic 的 /messages 端点要求
 
         Anthropic's contract is stricter than OpenAI's:
+        # Anthropic 的契约比 OpenAI 更严格
 
         1. Consecutive same-role turns must be collapsed into one.
+        # 连续相同角色的回合必须合并为一个
         2. The conversation cannot end with an ``assistant`` turn — Anthropic
+        # 对话不能以 assistant 回合结束 — Anthropic
            does not support assistant-message prefill and returns 400.
+        # 不支持 assistant 消息预填充，会返回 400
         3. The conversation cannot start with an ``assistant`` turn — the
+        # 对话不能以 assistant 回合开始 — 第一个消息必须是 user
            first message must be ``user``.
-
-        Rules 2 and 3 mirror ``LLMProvider._enforce_role_alternation`` in
-        ``base.py``, which applies the equivalent invariants to OpenAI-compat
-        providers.  The only Anthropic-specific wrinkle: ``tool_use`` blocks
-        live inside ``content`` (not a separate ``tool_calls`` field) and are
-        invalid inside ``user`` turns, so the recovery paths below must skip
-        any message carrying them rather than silently producing a malformed
-        request.
         """
         merged: list[dict[str, Any]] = []
         for msg in msgs:
@@ -332,6 +350,7 @@ class AnthropicProvider(LLMProvider):
     # ------------------------------------------------------------------
     # Tool definition conversion
     # ------------------------------------------------------------------
+    # 工具定义转换
 
     @staticmethod
     def _convert_tools(tools: list[dict[str, Any]] | None) -> list[dict[str, Any]] | None:
@@ -374,6 +393,7 @@ class AnthropicProvider(LLMProvider):
     # ------------------------------------------------------------------
     # Prompt caching
     # ------------------------------------------------------------------
+    # 提示缓存
 
     @classmethod
     def _apply_cache_control(
@@ -412,6 +432,7 @@ class AnthropicProvider(LLMProvider):
     # ------------------------------------------------------------------
     # Build API kwargs
     # ------------------------------------------------------------------
+    # 构建 API 参数
 
     def _build_kwargs(
         self,
@@ -474,6 +495,7 @@ class AnthropicProvider(LLMProvider):
     # ------------------------------------------------------------------
     # Response parsing
     # ------------------------------------------------------------------
+    # 响应解析
 
     @staticmethod
     def _parse_response(response: Any) -> LLMResponse:
@@ -530,6 +552,7 @@ class AnthropicProvider(LLMProvider):
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
+    # 公共 API
 
     async def chat(
         self,

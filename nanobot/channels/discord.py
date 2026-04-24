@@ -1,4 +1,6 @@
-"""Discord channel implementation using discord.py."""
+"""Discord channel implementation using discord.py.
+使用 discord.py 的 Discord 频道实现。
+"""
 
 from __future__ import annotations
 
@@ -33,13 +35,14 @@ if DISCORD_AVAILABLE:
     from discord.abc import Messageable
 
 MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024  # 20MB
-MAX_MESSAGE_LEN = 2000  # Discord message character limit
+MAX_MESSAGE_LEN = 2000  # Discord 消息字符限制
 TYPING_INTERVAL_S = 8
 
 
 @dataclass
 class _StreamBuf:
-    """Per-chat streaming accumulator for progressive Discord message edits."""
+    """Per-chat streaming accumulator for progressive Discord message edits.
+    每个聊天的流式累积器，用于渐进式 Discord 消息编辑。"""
 
     text: str = ""
     message: Any | None = None
@@ -48,12 +51,14 @@ class _StreamBuf:
 
 
 class DiscordConfig(Base):
-    """Discord channel configuration."""
+    """Discord channel configuration.
+    Discord 频道配置。"""
 
     enabled: bool = False
     token: str = ""
     allow_from: list[str] = Field(default_factory=list)
     allow_channels: list[str] = Field(default_factory=list)  # Allowed channel IDs (empty = all)
+    # 允许的频道 ID（空 = 全部）
     intents: int = 37377
     group_policy: Literal["mention", "open"] = "mention"
     read_receipt_emoji: str = "👀"
@@ -68,7 +73,8 @@ class DiscordConfig(Base):
 if DISCORD_AVAILABLE:
 
     class DiscordBotClient(discord.Client):
-        """discord.py client that forwards events to the channel."""
+        """discord.py client that forwards events to the channel.
+        将事件转发到频道的 discord.py 客户端。"""
 
         def __init__(
             self,
@@ -84,6 +90,8 @@ if DISCORD_AVAILABLE:
             self._register_app_commands()
 
         async def on_ready(self) -> None:
+            """Called when the bot is ready.
+            当机器人就绪时调用。"""
             self._channel._bot_user_id = str(self.user.id) if self.user else None
             logger.info("Discord bot connected as user {}", self._channel._bot_user_id)
             try:
@@ -93,10 +101,13 @@ if DISCORD_AVAILABLE:
                 logger.warning("Discord app command sync failed: {}", e)
 
         async def on_message(self, message: discord.Message) -> None:
+            """Handle incoming message events.
+            处理传入的消息事件。"""
             await self._channel._handle_discord_message(message)
 
         async def _reply_ephemeral(self, interaction: discord.Interaction, text: str) -> bool:
-            """Send an ephemeral interaction response and report success."""
+            """Send an ephemeral interaction response and report success.
+            发送临时交互响应并报告成功。"""
             try:
                 await interaction.response.send_message(text, ephemeral=True)
                 return True
@@ -109,6 +120,8 @@ if DISCORD_AVAILABLE:
             interaction: discord.Interaction,
             command_text: str,
         ) -> None:
+            """Forward slash command to channel handler.
+            将斜杠命令转发到频道处理器。"""
             sender_id = str(interaction.user.id)
             channel_id = interaction.channel_id
 
@@ -134,6 +147,8 @@ if DISCORD_AVAILABLE:
             )
 
         def _register_app_commands(self) -> None:
+            """Register Discord app commands (slash commands).
+            注册 Discord 应用命令（斜杠命令）。"""
             commands = (
                 ("new", "Stop current task and start a new conversation", "/new"),
                 ("stop", "Stop the current task", "/stop"),
@@ -173,7 +188,8 @@ if DISCORD_AVAILABLE:
                 )
 
         async def send_outbound(self, msg: OutboundMessage) -> None:
-            """Send a nanobot outbound message using Discord transport rules."""
+            """Send a nanobot outbound message using Discord transport rules.
+            使用 Discord 传输规则发送 nanobot 出站消息。"""
             channel_id = int(msg.chat_id)
 
             channel = self.get_channel(channel_id)
@@ -216,7 +232,8 @@ if DISCORD_AVAILABLE:
             reference: discord.PartialMessage | None,
             mention_settings: discord.AllowedMentions,
         ) -> bool:
-            """Send a file attachment via discord.py."""
+            """Send a file attachment via discord.py.
+            通过 discord.py 发送文件附件。"""
             path = Path(file_path)
             if not path.is_file():
                 logger.warning("Discord file not found, skipping: {}", file_path)
@@ -240,7 +257,8 @@ if DISCORD_AVAILABLE:
 
         @staticmethod
         def _build_chunks(content: str, failed_media: list[str], sent_media: bool) -> list[str]:
-            """Build outbound text chunks, including attachment-failure fallback text."""
+            """Build outbound text chunks, including attachment-failure fallback text.
+            构建出站文本块，包括附件失败回退文本。"""
             chunks = split_message(content, MAX_MESSAGE_LEN)
             if chunks or not failed_media or sent_media:
                 return chunks
@@ -252,7 +270,8 @@ if DISCORD_AVAILABLE:
             channel: Messageable,
             reply_to: str | None,
         ) -> tuple[discord.PartialMessage | None, discord.AllowedMentions]:
-            """Build reply context for outbound messages."""
+            """Build reply context for outbound messages.
+            为出站消息构建回复上下文。"""
             mention_settings = discord.AllowedMentions(replied_user=False)
             if not reply_to:
                 return None, mention_settings
@@ -266,7 +285,8 @@ if DISCORD_AVAILABLE:
 
 
 class DiscordChannel(BaseChannel):
-    """Discord channel using discord.py."""
+    """Discord channel using discord.py.
+    使用 discord.py 的 Discord 频道。"""
 
     name = "discord"
     display_name = "Discord"
@@ -278,7 +298,8 @@ class DiscordChannel(BaseChannel):
 
     @staticmethod
     def _channel_key(channel_or_id: Any) -> str:
-        """Normalize channel-like objects and ids to a stable string key."""
+        """Normalize channel-like objects and ids to a stable string key.
+        将类频道对象和 ID 规范化为稳定的字符串键。"""
         channel_id = getattr(channel_or_id, "id", channel_or_id)
         return str(channel_id)
 
@@ -291,11 +312,13 @@ class DiscordChannel(BaseChannel):
         self._typing_tasks: dict[str, asyncio.Task[None]] = {}
         self._bot_user_id: str | None = None
         self._pending_reactions: dict[str, Any] = {}  # chat_id -> message object
+        # chat_id -> 消息对象
         self._working_emoji_tasks: dict[str, asyncio.Task[None]] = {}
         self._stream_bufs: dict[str, _StreamBuf] = {}
 
     async def start(self) -> None:
-        """Start the Discord client."""
+        """Start the Discord client.
+        启动 Discord 客户端。"""
         if not DISCORD_AVAILABLE:
             logger.error("discord.py not installed. Run: pip install nanobot-ai[discord]")
             return
@@ -350,12 +373,14 @@ class DiscordChannel(BaseChannel):
             await self._reset_runtime_state(close_client=True)
 
     async def stop(self) -> None:
-        """Stop the Discord channel."""
+        """Stop the Discord channel.
+        停止 Discord 频道。"""
         self._running = False
         await self._reset_runtime_state(close_client=True)
 
     async def send(self, msg: OutboundMessage) -> None:
-        """Send a message through Discord using discord.py."""
+        """Send a message through Discord using discord.py.
+        通过 discord.py 发送消息到 Discord。"""
         client = self._client
         if client is None or not client.is_ready():
             logger.warning("Discord client not ready; dropping outbound message")
@@ -376,7 +401,8 @@ class DiscordChannel(BaseChannel):
     async def send_delta(
         self, chat_id: str, delta: str, metadata: dict[str, Any] | None = None
     ) -> None:
-        """Progressive Discord delivery: send once, then edit until the stream ends."""
+        """Progressive Discord delivery: send once, then edit until the stream ends.
+        渐进式 Discord 投递：发送一次，然后编辑直到流结束。"""
         client = self._client
         if client is None or not client.is_ready():
             logger.warning("Discord client not ready; dropping stream delta")
@@ -434,12 +460,17 @@ class DiscordChannel(BaseChannel):
 
     async def _handle_discord_message(self, message: discord.Message) -> None:
         """Handle incoming Discord messages from discord.py.
+        处理来自 discord.py 的传入 Discord 消息。
 
         Self-loop guard: only drop messages from this bot's own account. Messages
         from other bots are allowed through so multi-agent setups (one bot asking
         another for help, a bot mentioning another by @name, etc.) can work.
         Bot-from-bot loops are still prevented per-instance because each bot
         still ignores its own outbound messages. (#3217)
+        自我循环防护：仅丢弃来自此机器人自己账户的消息。
+        允许来自其他机器人的消息通过，以便多代理设置（一个机器人向另一个求助，
+        一个机器人通过 @名称提及另一个等）可以工作。
+        每个实例仍然防止机器人之间的循环，因为每个机器人仍然忽略自己的出站消息。
         """
         if self._bot_user_id is not None and str(message.author.id) == self._bot_user_id:
             return
@@ -458,6 +489,7 @@ class DiscordChannel(BaseChannel):
         await self._start_typing(message.channel)
 
         # Add read receipt reaction immediately, working emoji after delay
+        # 立即添加已读回执反应，延迟后添加工作中表情
         try:
             await message.add_reaction(self.config.read_receipt_emoji)
             self._pending_reactions[channel_id] = message
@@ -465,6 +497,7 @@ class DiscordChannel(BaseChannel):
             logger.debug("Failed to add read receipt reaction: {}", e)
 
         # Delayed working indicator (cosmetic — not tied to subagent lifecycle)
+        # 延迟工作中的指示器（装饰性的 — 与子代理生命周期无关）
         async def _delayed_working_emoji() -> None:
             await asyncio.sleep(self.config.working_emoji_delay)
             try:
@@ -488,11 +521,13 @@ class DiscordChannel(BaseChannel):
             raise
 
     async def _on_message(self, message: discord.Message) -> None:
-        """Backward-compatible alias for legacy tests/callers."""
+        """Backward-compatible alias for legacy tests/callers.
+        面向旧测试/调用者的向后兼容别名。"""
         await self._handle_discord_message(message)
 
     async def _resolve_channel(self, chat_id: str) -> Any | None:
-        """Resolve a Discord channel from cache first, then network fetch."""
+        """Resolve a Discord channel from cache first, then network fetch.
+        首先从缓存解析 Discord 频道，然后从网络获取。"""
         client = self._client
         if client is None or not client.is_ready():
             return None
@@ -507,7 +542,8 @@ class DiscordChannel(BaseChannel):
             return None
 
     async def _finalize_stream(self, chat_id: str, buf: _StreamBuf) -> None:
-        """Commit the final streamed content and flush overflow chunks."""
+        """Commit the final streamed content and flush overflow chunks.
+        提交最终流式内容并刷新溢出块。"""
         chunks = DiscordBotClient._build_chunks(buf.text, [], False)
         if not chunks:
             self._stream_bufs.pop(chat_id, None)
@@ -538,10 +574,12 @@ class DiscordChannel(BaseChannel):
         sender_id: str,
         content: str,
     ) -> bool:
-        """Check if inbound Discord message should be processed."""
+        """Check if inbound Discord message should be processed.
+        检查是否应该处理入站 Discord 消息。"""
         if not self.is_allowed(sender_id):
             return False
         # Channel-based filtering: only respond in allowed channels
+        # 基于频道的过滤：仅在允许的频道中响应
         allow_channels = self.config.allow_channels
         if allow_channels:
             channel_id = self._channel_key(message.channel)
@@ -555,7 +593,8 @@ class DiscordChannel(BaseChannel):
         self,
         attachments: list[discord.Attachment],
     ) -> tuple[list[str], list[str]]:
-        """Download supported attachments and return paths + display markers."""
+        """Download supported attachments and return paths + display markers.
+        下载支持的附件并返回路径和显示标记。"""
         media_paths: list[str] = []
         markers: list[str] = []
         media_dir = get_media_dir("discord")
@@ -580,14 +619,16 @@ class DiscordChannel(BaseChannel):
 
     @staticmethod
     def _compose_inbound_content(content: str, attachment_markers: list[str]) -> str:
-        """Combine message text with attachment markers."""
+        """Combine message text with attachment markers.
+        将消息文本与附件标记组合。"""
         content_parts = [content] if content else []
         content_parts.extend(attachment_markers)
         return "\n".join(part for part in content_parts if part) or "[empty message]"
 
     @staticmethod
     def _build_inbound_metadata(message: discord.Message) -> dict[str, str | None]:
-        """Build metadata for inbound Discord messages."""
+        """Build metadata for inbound Discord messages.
+        为入站 Discord 消息构建元数据。"""
         reply_to = (
             str(message.reference.message_id)
             if message.reference and message.reference.message_id
@@ -600,7 +641,8 @@ class DiscordChannel(BaseChannel):
         }
 
     def _should_respond_in_group(self, message: discord.Message, content: str) -> bool:
-        """Check if the bot should respond in a guild channel based on policy."""
+        """Check if the bot should respond in a guild channel based on policy.
+        根据策略检查机器人是否应在公会频道中响应。"""
         if self.config.group_policy == "open":
             return True
 
@@ -623,7 +665,8 @@ class DiscordChannel(BaseChannel):
         return True
 
     async def _start_typing(self, channel: Messageable) -> None:
-        """Start periodic typing indicator for a channel."""
+        """Start periodic typing indicator for a channel.
+        为频道启动定期打字指示器。"""
         channel_id = self._channel_key(channel)
         await self._stop_typing(channel_id)
 
@@ -641,7 +684,8 @@ class DiscordChannel(BaseChannel):
         self._typing_tasks[channel_id] = asyncio.create_task(typing_loop())
 
     async def _stop_typing(self, channel_id: str) -> None:
-        """Stop typing indicator for a channel."""
+        """Stop typing indicator for a channel.
+        停止频道的打字指示器。"""
         task = self._typing_tasks.pop(self._channel_key(channel_id), None)
         if task is None:
             return
@@ -652,8 +696,10 @@ class DiscordChannel(BaseChannel):
             pass
 
     async def _clear_reactions(self, chat_id: str) -> None:
-        """Remove all pending reactions after bot replies."""
+        """Remove all pending reactions after bot replies.
+        机器人在回复后清除所有待处理反应。"""
         # Cancel delayed working emoji if it hasn't fired yet
+        # 如果延迟工作中的表情尚未触发，则取消
         task = self._working_emoji_tasks.pop(chat_id, None)
         if task and not task.done():
             task.cancel()
@@ -669,13 +715,15 @@ class DiscordChannel(BaseChannel):
                 pass
 
     async def _cancel_all_typing(self) -> None:
-        """Stop all typing tasks."""
+        """Stop all typing tasks.
+        停止所有打字任务。"""
         channel_ids = list(self._typing_tasks)
         for channel_id in channel_ids:
             await self._stop_typing(channel_id)
 
     async def _reset_runtime_state(self, close_client: bool) -> None:
-        """Reset client and typing state."""
+        """Reset client and typing state.
+        重置客户端和打字状态。"""
         await self._cancel_all_typing()
         self._stream_bufs.clear()
         if close_client and self._client is not None and not self._client.is_closed():

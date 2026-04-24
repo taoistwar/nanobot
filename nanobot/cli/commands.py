@@ -37,9 +37,12 @@ from nanobot import __logo__, __version__
 
 class SafeFileHistory(FileHistory):
     """FileHistory subclass that sanitizes surrogate characters on write.
+    SafeFileHistory - 写入时清理代理字符的 FileHistory 子类。
 
     On Windows, special Unicode input (emoji, mixed-script) can produce
     surrogate characters that crash prompt_toolkit's file write.
+    在 Windows 上，特殊 Unicode 输入（表情符号、混合脚本）可能产生代理字符，
+    导致 prompt_toolkit 的文件写入崩溃。
     See issue #2846.
     """
 
@@ -75,7 +78,8 @@ _SAVED_TERM_ATTRS = None  # original termios settings, restored on exit
 
 
 def _flush_pending_tty_input() -> None:
-    """Drop unread keypresses typed while the model was generating output."""
+    """Drop unread keypresses typed while the model was generating output.
+    丢弃模型生成输出期间键入的未读按键。"""
     try:
         fd = sys.stdin.fileno()
         if not os.isatty(fd):
@@ -103,7 +107,8 @@ def _flush_pending_tty_input() -> None:
 
 
 def _restore_terminal() -> None:
-    """Restore terminal to its original state (echo, line buffering, etc.)."""
+    """Restore terminal to its original state (echo, line buffering, etc.).
+    恢复终端到原始状态（回显、行缓冲等）。"""
     if _SAVED_TERM_ATTRS is None:
         return
     try:
@@ -115,7 +120,8 @@ def _restore_terminal() -> None:
 
 
 def _init_prompt_session() -> None:
-    """Create the prompt_toolkit session with persistent file history."""
+    """Create the prompt_toolkit session with persistent file history.
+    创建带持久文件历史记录的 prompt_toolkit 会话。"""
     global _PROMPT_SESSION, _SAVED_TERM_ATTRS
 
     # Save terminal state so we can restore it on exit
@@ -139,11 +145,13 @@ def _init_prompt_session() -> None:
 
 
 def _make_console() -> Console:
+    """创建控制台实例。"""
     return Console(file=sys.stdout)
 
 
 def _render_interactive_ansi(render_fn) -> str:
-    """Render Rich output to ANSI so prompt_toolkit can print it safely."""
+    """Render Rich output to ANSI so prompt_toolkit can print it safely.
+    将 Rich 输出渲染为 ANSI，以便 prompt_toolkit 安全打印。"""
     ansi_console = Console(
         force_terminal=sys.stdout.isatty(),
         color_system=console.color_system or "standard",
@@ -159,7 +167,8 @@ def _print_agent_response(
     render_markdown: bool,
     metadata: dict | None = None,
 ) -> None:
-    """Render assistant response with consistent terminal styling."""
+    """Render assistant response with consistent terminal styling.
+    使用一致的终端样式渲染助手响应。"""
     console = _make_console()
     content = response or ""
     body = _response_renderable(content, render_markdown, metadata)
@@ -170,7 +179,8 @@ def _print_agent_response(
 
 
 def _response_renderable(content: str, render_markdown: bool, metadata: dict | None = None):
-    """Render plain-text command output without markdown collapsing newlines."""
+    """Render plain-text command output without markdown collapsing newlines.
+    渲染纯文本命令输出，markdown 不会折叠换行符。"""
     if not render_markdown:
         return Text(content)
     if (metadata or {}).get("render_as") == "text":
@@ -179,7 +189,8 @@ def _response_renderable(content: str, render_markdown: bool, metadata: dict | N
 
 
 async def _print_interactive_line(text: str) -> None:
-    """Print async interactive updates with prompt_toolkit-safe Rich styling."""
+    """Print async interactive updates with prompt_toolkit-safe Rich styling.
+    使用 prompt_toolkit 安全的 Rich 样式打印异步交互更新。"""
     def _write() -> None:
         ansi = _render_interactive_ansi(
             lambda c: c.print(f"  [dim]↳ {text}[/dim]")
@@ -194,7 +205,8 @@ async def _print_interactive_response(
     render_markdown: bool,
     metadata: dict | None = None,
 ) -> None:
-    """Print async interactive replies with prompt_toolkit-safe Rich styling."""
+    """Print async interactive replies with prompt_toolkit-safe Rich styling.
+    使用 prompt_toolkit 安全的 Rich 样式打印异步交互回复。"""
     def _write() -> None:
         content = response or ""
         ansi = _render_interactive_ansi(
@@ -211,29 +223,34 @@ async def _print_interactive_response(
 
 
 def _print_cli_progress_line(text: str, thinking: ThinkingSpinner | None) -> None:
-    """Print a CLI progress line, pausing the spinner if needed."""
+    """Print a CLI progress line, pausing the spinner if needed.
+    打印 CLI 进度行，必要时暂停旋转指示器。"""
     with thinking.pause() if thinking else nullcontext():
         console.print(f"  [dim]↳ {text}[/dim]")
 
 
 async def _print_interactive_progress_line(text: str, thinking: ThinkingSpinner | None) -> None:
-    """Print an interactive progress line, pausing the spinner if needed."""
+    """Print an interactive progress line, pausing the spinner if needed.
+    打印交互式进度行，必要时暂停旋转指示器。"""
     with thinking.pause() if thinking else nullcontext():
         await _print_interactive_line(text)
 
 
 def _is_exit_command(command: str) -> bool:
-    """Return True when input should end interactive chat."""
+    """Return True when input should end interactive chat.
+    当输入应该结束交互式聊天时返回 True。"""
     return command.lower() in EXIT_COMMANDS
 
 
 async def _read_interactive_input_async() -> str:
     """Read user input using prompt_toolkit (handles paste, history, display).
+    使用 prompt_toolkit 读取用户输入（处理粘贴、历史记录、显示）。
 
     prompt_toolkit natively handles:
-    - Multiline paste (bracketed paste mode)
-    - History navigation (up/down arrows)
-    - Clean display (no ghost characters or artifacts)
+    prompt_toolkit 原生处理：
+    - Multiline paste (bracketed paste mode) / 多行粘贴（括号粘贴模式）
+    - History navigation (up/down arrows) / 历史导航（上下箭头）
+    - Clean display (no ghost characters or artifacts) / 清晰显示（无残影或伪影）
     """
     if _PROMPT_SESSION is None:
         raise RuntimeError("Call _init_prompt_session() first")
@@ -366,7 +383,8 @@ def onboard(
 
 
 def _merge_missing_defaults(existing: Any, defaults: Any) -> Any:
-    """Recursively fill in missing values from defaults without overwriting user config."""
+    """Recursively fill in missing values from defaults without overwriting user config.
+    递归地从默认值填充缺失值，而不覆盖用户配置。"""
     if not isinstance(existing, dict) or not isinstance(defaults, dict):
         return existing
 
@@ -380,7 +398,8 @@ def _merge_missing_defaults(existing: Any, defaults: Any) -> Any:
 
 
 def _onboard_plugins(config_path: Path) -> None:
-    """Inject default config for all discovered channels (built-in + plugins)."""
+    """Inject default config for all discovered channels (built-in + plugins).
+    为所有发现的渠道（内置+插件）注入默认配置。"""
     import json
 
     from nanobot.channels.registry import discover_all
@@ -405,8 +424,10 @@ def _onboard_plugins(config_path: Path) -> None:
 
 def _make_provider(config: Config):
     """Create the appropriate LLM provider from config.
+    根据配置创建合适的 LLM 提供者。
 
     Routing is driven by ``ProviderSpec.backend`` in the registry.
+    路由由注册表中的 ``ProviderSpec.backend`` 决定。
     """
     from nanobot.providers.base import GenerationSettings
     from nanobot.providers.registry import find_by_name
@@ -478,7 +499,8 @@ def _make_provider(config: Config):
 
 
 def _load_runtime_config(config: str | None = None, workspace: str | None = None) -> Config:
-    """Load config and optionally override the active workspace."""
+    """Load config and optionally override the active workspace.
+    加载配置，可选择覆盖当前工作空间。"""
     from nanobot.config.loader import load_config, resolve_config_env_vars, set_config_path
 
     config_path = None
@@ -502,7 +524,8 @@ def _load_runtime_config(config: str | None = None, workspace: str | None = None
 
 
 def _warn_deprecated_config_keys(config_path: Path | None) -> None:
-    """Hint users to remove obsolete keys from their config file."""
+    """Hint users to remove obsolete keys from their config file.
+    提示用户从配置文件中移除过时的键。"""
     import json
 
     from nanobot.config.loader import get_config_path
@@ -520,7 +543,8 @@ def _warn_deprecated_config_keys(config_path: Path | None) -> None:
 
 
 def _migrate_cron_store(config: "Config") -> None:
-    """One-time migration: move legacy global cron store into the workspace."""
+    """One-time migration: move legacy global cron store into the workspace.
+    一次性迁移：将遗留的全局 cron 存储移动到工作空间。"""
     from nanobot.config.paths import get_cron_dir
 
     legacy_path = get_cron_dir() / "jobs.json"
@@ -650,7 +674,8 @@ def _run_gateway(
     port: int | None = None,
     open_browser_url: str | None = None,
 ) -> None:
-    """Shared gateway runtime; ``open_browser_url`` opens a tab once channels are up."""
+    """Shared gateway runtime; ``open_browser_url`` opens a tab once channels are up.
+    共享的网关运行时；``open_browser_url`` 在渠道启动后打开一个标签页。"""
     from nanobot.agent.loop import AgentLoop
     from nanobot.bus.queue import MessageBus
     from nanobot.channels.manager import ChannelManager
@@ -768,7 +793,8 @@ def _run_gateway(
     channels = ChannelManager(config, bus, session_manager=session_manager)
 
     def _pick_heartbeat_target() -> tuple[str, str]:
-        """Pick a routable channel/chat target for heartbeat-triggered messages."""
+        """Pick a routable channel/chat target for heartbeat-triggered messages.
+        为心跳触发的消息选择可路由的渠道/聊天目标。"""
         enabled = set(channels.enabled_channels)
         # Prefer the most recently updated non-internal session on an enabled channel.
         for item in session_manager.list_sessions():
@@ -785,7 +811,8 @@ def _run_gateway(
 
     # Create heartbeat service
     async def on_heartbeat_execute(tasks: str) -> str:
-        """Phase 2: execute heartbeat tasks through the full agent loop."""
+        """Phase 2: execute heartbeat tasks through the full agent loop.
+        第二阶段：通过完整的 agent loop 执行心跳任务。"""
         channel, chat_id = _pick_heartbeat_target()
 
         async def _silent(*_args, **_kwargs):
@@ -808,7 +835,8 @@ def _run_gateway(
         return resp.content if resp else ""
 
     async def on_heartbeat_notify(response: str) -> None:
-        """Deliver a heartbeat response to the user's channel."""
+        """Deliver a heartbeat response to the user's channel.
+        将心跳响应传送到用户的渠道。"""
         from nanobot.bus.events import OutboundMessage
         channel, chat_id = _pick_heartbeat_target()
         if channel == "cli":
@@ -839,7 +867,8 @@ def _run_gateway(
     console.print(f"[green]✓[/green] Heartbeat: every {hb_cfg.interval_s}s")
 
     async def _health_server(host: str, health_port: int):
-        """Lightweight HTTP health endpoint on the gateway port."""
+        """Lightweight HTTP health endpoint on the gateway port.
+        网关端口上的轻量级 HTTP 健康端点。"""
         import json as _json
 
         async def handle(reader, writer):
@@ -897,7 +926,8 @@ def _run_gateway(
     console.print(f"[green]✓[/green] Dream: {dream_cfg.describe_schedule()}")
 
     async def _open_browser_when_ready() -> None:
-        """Wait for the gateway to bind, then point the user's browser at the webui."""
+        """Wait for the gateway to bind, then point the user's browser at the webui.
+        等待网关绑定，然后将用户的浏览器指向 webui。"""
         if not open_browser_url:
             return
         import webbrowser
@@ -1240,7 +1270,8 @@ def channels_status(
 
 
 def _get_bridge_dir() -> Path:
-    """Get the bridge directory, setting it up if needed."""
+    """Get the bridge directory, setting it up if needed.
+    获取桥接目录，必要时进行设置。"""
     import shutil
     import subprocess
 

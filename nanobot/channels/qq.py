@@ -1,4 +1,5 @@
 """QQ channel implementation using botpy SDK.
+// QQ 频道实现，使用 botpy SDK
 
 Inbound:
 - Parse QQ botpy messages (C2C / Group)
@@ -128,6 +129,7 @@ def _make_bot_class(channel: QQChannel) -> type[botpy.Client]:
 
 class QQConfig(Base):
     """QQ channel configuration using botpy SDK."""
+    // QQ 频道配置，使用 botpy SDK
 
     enabled: bool = False
     app_id: str = ""
@@ -146,6 +148,7 @@ class QQConfig(Base):
 
 class QQChannel(BaseChannel):
     """QQ channel using botpy SDK with WebSocket connection."""
+    // QQ 频道，使用 botpy SDK 配合 WebSocket 连接
 
     name = "qq"
     display_name = "QQ"

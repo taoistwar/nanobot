@@ -1,8 +1,7 @@
-"""Shared helpers for decoding ``data:...;base64,...`` URLs to disk.
+"""用于将 ``data:...;base64,...`` URL 解码到磁盘的共享辅助工具。
 
-Historically lived in ``nanobot.api.server``; now shared by the WebSocket
-channel so the ``api`` + ``websocket`` ingress paths apply the same parsing,
-size guard, and filesystem layout.
+最初位于 ``nanobot.api.server``；现在被 WebSocket 频道共享，
+使 ``api`` + ``websocket`` 入口路径使用相同的解析、大小限制和文件系统布局。
 """
 
 from __future__ import annotations
@@ -22,7 +21,7 @@ _DATA_URL_RE = re.compile(r"^data:([^;]+);base64,(.+)$", re.DOTALL)
 
 
 class FileSizeExceeded(Exception):
-    """Raised when a decoded payload exceeds the caller's size limit."""
+    """当解码后的数据超过调用者指定的大小限制时抛出。"""
 
 
 def save_base64_data_url(
@@ -31,11 +30,10 @@ def save_base64_data_url(
     *,
     max_bytes: int | None = None,
 ) -> str | None:
-    """Decode a ``data:<mime>;base64,<payload>`` URL and persist it.
+    """解码 ``data:<mime>;base64,<payload>`` URL 并持久化到磁盘。
 
-    Returns the absolute path on success, ``None`` when the URL shape or the
-    base64 payload itself is malformed. Raises :class:`FileSizeExceeded`
-    when the decoded payload is larger than ``max_bytes`` (default 10 MB).
+    成功时返回绝对路径，URL 格式或 base64 数据格式错误时返回 ``None``。
+    当解码后的数据大于 ``max_bytes``（默认 10 MB）时抛出 :class:`FileSizeExceeded`。
     """
     m = _DATA_URL_RE.match(data_url)
     if not m:

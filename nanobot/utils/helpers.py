@@ -1,4 +1,8 @@
-"""Utility functions for nanobot."""
+"""nanobot 工具函数模块。
+
+提供 nanobot 核心功能所需的各类辅助工具函数，包括文本处理、
+图片处理、token 估算、消息构建等功能。
+"""
 
 import base64
 import json
@@ -15,27 +19,18 @@ from loguru import logger
 
 
 def strip_think(text: str) -> str:
-    """Remove thinking blocks, unclosed trailing tags, and tokenizer-level
-    template leaks occasionally emitted by some models (notably Gemma 4's
-    Ollama renderer).
+    """从文本中移除思维块、未闭合的尾部标签和 tokenizer 级别的泄漏。
 
-    Covers:
-      1. Well-formed `<think>...</think>` and `<thought>...</thought>` blocks.
-      2. Streaming prefixes where the block is never closed.
-      3. *Malformed* opening tags missing the `>` — e.g. `<think广场…`. The
-         model sometimes emits the tag name directly followed by user-facing
-         content with no delimiter; without this step the literal `<think`
-         leaks into the rendered message.
-      4. Harmony-style channel markers like `<channel|>` / `<|channel|>`
-         **at the start of the text** — conservative to avoid eating
-         explanatory prose that mentions these tokens.
-      5. Orphan closing tags `</think>` / `</thought>` **at the very start
-         or end of the text** only, for the same reason.
+    剥离内容：
+    1. 标准 ``<think>`` … ``</think>`` 块
+    2. ``<thought>`` … ``</thought>`` 块（Gemma 3 风格）
+    3. 从未关闭的流式前缀块
+    4. 格式错误的开放标签缺少 ``>`` 的情况，如 ``<think广场…``
+    5. Harmony 风格的频道标记如 ``<channel|>`` / ``<|channel|>``，仅在文本开头
+    6. 孤立的闭合标签 ``</think>`` / ``</thought>``，仅在文本开头或结尾
 
-    Since this is also applied before persisting to history (memory.py),
-    the edge-only stripping of (4) and (5) is deliberate: stripping those
-    tokens mid-text would silently rewrite any message where a user or the
-    assistant discusses the tokens themselves.
+    由于此函数也应用于持久化到历史记录之前（memory.py），
+    因此对第 4 和第 5 项采用仅边缘剥离的方式是有意为之。
     """
     # Well-formed blocks first.
     text = re.sub(r"<think>[\s\S]*?</think>", "", text)
@@ -61,7 +56,7 @@ def strip_think(text: str) -> str:
 
 
 def detect_image_mime(data: bytes) -> str | None:
-    """Detect image MIME type from magic bytes, ignoring file extension."""
+    """通过文件魔数检测图片 MIME类型，忽略文件扩展名。"""
     if data[:8] == b"\x89PNG\r\n\x1a\n":
         return "image/png"
     if data[:3] == b"\xff\xd8\xff":
@@ -76,7 +71,7 @@ def detect_image_mime(data: bytes) -> str | None:
 def build_image_content_blocks(
     raw: bytes, mime: str, path: str, label: str
 ) -> list[dict[str, Any]]:
-    """Build native image blocks plus a short text label."""
+    """构建原生图片块并附带简短的文本标签。"""
     b64 = base64.b64encode(raw).decode()
     return [
         {
@@ -89,18 +84,18 @@ def build_image_content_blocks(
 
 
 def ensure_dir(path: Path) -> Path:
-    """Ensure directory exists, return it."""
+    """确保目录存在，如不存在则创建，然后返回该目录路径。"""
     path.mkdir(parents=True, exist_ok=True)
     return path
 
 
 def timestamp() -> str:
-    """Current ISO timestamp."""
+    """返回当前 ISO 格式的时间戳字符串。"""
     return datetime.now().isoformat()
 
 
 def current_time_str(timezone: str | None = None) -> str:
-    """Return the current time string."""
+    """返回当前时间字符串，包含时区和格式化的日期时间。"""
     from zoneinfo import ZoneInfo
 
     try:
@@ -123,24 +118,24 @@ _TOOL_RESULT_MAX_BUCKETS = 32
 
 
 def safe_filename(name: str) -> str:
-    """Replace unsafe path characters with underscores."""
+    """将不安全的路径字符替换为下划线，返回安全的文件名。"""
     return _UNSAFE_CHARS.sub("_", name).strip()
 
 
 def image_placeholder_text(path: str | None, *, empty: str = "[image]") -> str:
-    """Build an image placeholder string."""
+    """构建图片占位符字符串，用于显示图片路径或默认文本。"""
     return f"[image: {path}]" if path else empty
 
 
 def truncate_text(text: str, max_chars: int) -> str:
-    """Truncate text with a stable suffix."""
+    """截断文本到指定最大字符数，添加省略后缀表示截断。"""
     if max_chars <= 0 or len(text) <= max_chars:
         return text
     return text[:max_chars] + "\n... (truncated)"
 
 
 def find_legal_message_start(messages: list[dict[str, Any]]) -> int:
-    """Find the first index whose tool results have matching assistant calls."""
+    """查找第一条工具调用与工具结果相匹配的消息索引位置。"""
     declared: set[str] = set()
     start = 0
     for i, msg in enumerate(messages):
@@ -163,6 +158,7 @@ def find_legal_message_start(messages: list[dict[str, Any]]) -> int:
 
 
 def stringify_text_blocks(content: list[dict[str, Any]]) -> str | None:
+    """将文本块列表合并为单个字符串，失败时返回 None。"""
     parts: list[str] = []
     for block in content:
         if not isinstance(block, dict):
@@ -183,6 +179,7 @@ def _render_tool_result_reference(
     preview: str,
     truncated_preview: bool,
 ) -> str:
+    """渲染工具结果引用字符串，包含文件路径和预览信息。"""
     result = (
         f"[tool output persisted]\n"
         f"Full output saved to: {filepath}\n"
@@ -195,6 +192,7 @@ def _render_tool_result_reference(
 
 
 def _bucket_mtime(path: Path) -> float:
+    """获取路径的修改时间，失败时返回 0.0。"""
     try:
         return path.stat().st_mtime
     except OSError:
@@ -202,6 +200,7 @@ def _bucket_mtime(path: Path) -> float:
 
 
 def _cleanup_tool_result_buckets(root: Path, current_bucket: Path) -> None:
+    """清理过期的工具结果存储桶，保留最近的 N 个。"""
     siblings = [path for path in root.iterdir() if path.is_dir() and path != current_bucket]
     cutoff = time.time() - _TOOL_RESULT_RETENTION_SECS
     for path in siblings:
@@ -217,6 +216,7 @@ def _cleanup_tool_result_buckets(root: Path, current_bucket: Path) -> None:
 
 
 def _write_text_atomic(path: Path, content: str) -> None:
+    """以原子方式写入文本文件（先写临时文件再重命名）。"""
     tmp = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
     try:
         tmp.write_text(content, encoding="utf-8")
@@ -234,7 +234,7 @@ def maybe_persist_tool_result(
     *,
     max_chars: int,
 ) -> Any:
-    """Persist oversized tool output and replace it with a stable reference string."""
+    """持久化过大的工具输出到文件，并返回包含文件路径的引用字符串。"""
     if workspace is None or max_chars <= 0:
         return content
 
@@ -276,15 +276,14 @@ def maybe_persist_tool_result(
 
 
 def split_message(content: str, max_len: int = 2000) -> list[str]:
-    """
-    Split content into chunks within max_len, preferring line breaks.
+    """将内容分割成不超过 max_len 的块，优先在换行符处分割。
 
-    Args:
-        content: The text content to split.
-        max_len: Maximum length per chunk (default 2000 for Discord compatibility).
+    参数:
+        content: 要分割的文本内容
+        max_len: 每块的最大长度（默认为 2000，以兼容 Discord）
 
-    Returns:
-        List of message chunks, each within max_len.
+    返回:
+        消息块列表，每块都不超过 max_len 字符
     """
     if not content:
         return []
@@ -313,7 +312,7 @@ def build_assistant_message(
     reasoning_content: str | None = None,
     thinking_blocks: list[dict] | None = None,
 ) -> dict[str, Any]:
-    """Build a provider-safe assistant message with optional reasoning fields."""
+    """构建对 provider 安全的助手消息，包含可选的推理字段。"""
     msg: dict[str, Any] = {"role": "assistant", "content": content or ""}
     if tool_calls:
         msg["tool_calls"] = tool_calls
@@ -328,10 +327,10 @@ def estimate_prompt_tokens(
     messages: list[dict[str, Any]],
     tools: list[dict[str, Any]] | None = None,
 ) -> int:
-    """Estimate prompt tokens with tiktoken.
+    """使用 tiktoken 估算 prompt 的 token 数量。
 
-    Counts all fields that providers send to the LLM: content, tool_calls,
-    reasoning_content, tool_call_id, name, plus per-message framing overhead.
+    统计 provider 发送给 LLM 的所有字段：content、tool_calls、
+    reasoning_content、tool_call_id、name，以及每条消息的开销。
     """
     try:
         enc = tiktoken.get_encoding("cl100k_base")
@@ -370,7 +369,7 @@ def estimate_prompt_tokens(
 
 
 def estimate_message_tokens(message: dict[str, Any]) -> int:
-    """Estimate prompt tokens contributed by one persisted message."""
+    """估算单条持久化消息对 prompt token 的贡献量。"""
     content = message.get("content")
     parts: list[str] = []
     if isinstance(content, str):
@@ -413,7 +412,7 @@ def estimate_prompt_tokens_chain(
     messages: list[dict[str, Any]],
     tools: list[dict[str, Any]] | None = None,
 ) -> tuple[int, str]:
-    """Estimate prompt tokens via provider counter first, then tiktoken fallback."""
+    """优先通过 provider 计数器估算 token，失败后使用 tiktoken 回退。"""
     provider_counter = getattr(provider, "estimate_prompt_tokens", None)
     if callable(provider_counter):
         try:
@@ -442,12 +441,12 @@ def build_status_content(
     active_task_count: int = 0,
     max_completion_tokens: int = 8192,
 ) -> str:
-    """Build a human-readable runtime status snapshot.
+    """构建人类可读的运行时状态快照。
 
-    Args:
-        search_usage_text: Optional pre-formatted web search usage string
-                           (produced by SearchUsageInfo.format()). When provided
-                           it is appended as an extra section.
+    参数:
+        search_usage_text: 可选的预格式化网络搜索使用量字符串
+                           （由 SearchUsageInfo.format() 生成）。如果提供，
+                           将作为额外部分追加到状态中。
     """
     uptime_s = int(time.time() - start_time)
     uptime = (
@@ -486,7 +485,7 @@ def build_status_content(
 
 
 def sync_workspace_templates(workspace: Path, silent: bool = False) -> list[str]:
-    """Sync bundled templates to workspace. Only creates missing files."""
+    """将打包的模板同步到工作空间，仅创建缺失的文件。"""
     from importlib.resources import files as pkg_files
 
     try:

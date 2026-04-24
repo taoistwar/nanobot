@@ -7,7 +7,10 @@ from typing import Any
 
 @dataclass
 class InboundMessage:
-    """Message received from a chat channel."""
+    """Message received from a chat channel.
+    
+    从聊天通道接收的消息数据类。
+    """
 
     channel: str  # telegram, discord, slack, whatsapp
     sender_id: str  # User identifier
@@ -20,13 +23,20 @@ class InboundMessage:
 
     @property
     def session_key(self) -> str:
-        """Unique key for session identification."""
+        """Unique key for session identification.
+        
+        返回会话的唯一标识键，格式为 channel:chat_id。
+        如果存在 session_key_override 则使用该值。
+        """
         return self.session_key_override or f"{self.channel}:{self.chat_id}"
 
 
 @dataclass
 class OutboundMessage:
-    """Message to send to a chat channel."""
+    """Message to send to a chat channel.
+    
+    发送给聊天通道的消息数据类。
+    """
 
     channel: str
     chat_id: str

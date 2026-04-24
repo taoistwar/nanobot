@@ -1,4 +1,5 @@
 """OpenAI-compatible provider for all non-Anthropic LLM APIs."""
+# 适用于所有非 Anthropic LLM API 的 OpenAI 兼容提供者
 
 from __future__ import annotations
 
@@ -61,14 +62,21 @@ _KIMI_THINKING_MODELS: frozenset[str] = frozenset({
 
 def _is_kimi_thinking_model(model_name: str) -> bool:
     """Return True if model_name refers to a Kimi thinking-capable model.
+    # 如果模型名称引用的是 Kimi 支持思考的模型，则返回 True
 
     Supports two forms:
+    # 支持两种形式
     - Exact match: e.g. kimi-k2.5 / kimi-k2.6 in _KIMI_THINKING_MODELS
+    # 精确匹配：例如 _KIMI_THINKING_MODELS 中的 kimi-k2.5 / kimi-k2.6
     - Slug match:  moonshotai/kimi-k2.5 -> the part after the last "/"
+    # Slug 匹配：moonshotai/kimi-k2.5 -> 最后一个 "/" 后的部分
                    is checked against _KIMI_THINKING_MODELS
+    # 会与 _KIMI_THINKING_MODULES 进行核对
 
     This covers both the native Moonshot provider (bare slug) and
+    # 这涵盖了原生 Moonshot 提供者（裸 slug）和
     OpenRouter-style names (``"publisher/slug"``).
+    # OpenRouter 风格的名称（"publisher/slug"）
     """
     name = model_name.lower()
     if name in _KIMI_THINKING_MODELS:
@@ -170,8 +178,10 @@ def _responses_circuit_key(
 
 class OpenAICompatProvider(LLMProvider):
     """Unified provider for all OpenAI-compatible APIs.
+    # 所有 OpenAI 兼容 API 的统一提供者
 
     Receives a resolved ``ProviderSpec`` from the caller — no internal
+    # 从调用者接收已解析的 ProviderSpec — 无需内部注册表查找
     registry lookups needed.
     """
 
@@ -213,6 +223,7 @@ class OpenAICompatProvider(LLMProvider):
 
     def _setup_env(self, api_key: str, api_base: str | None) -> None:
         """Set environment variables based on provider spec."""
+        # 根据提供者规范设置环境变量
         spec = self._spec
         if not spec or not spec.env_key:
             return
@@ -328,6 +339,7 @@ class OpenAICompatProvider(LLMProvider):
     # ------------------------------------------------------------------
     # Build kwargs
     # ------------------------------------------------------------------
+    # 构建 API 参数
 
     @staticmethod
     def _supports_temperature(
@@ -558,6 +570,7 @@ class OpenAICompatProvider(LLMProvider):
     # ------------------------------------------------------------------
     # Response parsing
     # ------------------------------------------------------------------
+    # 响应解析
 
     @staticmethod
     def _maybe_mapping(value: Any) -> dict[str, Any] | None:
@@ -968,6 +981,7 @@ class OpenAICompatProvider(LLMProvider):
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
+    # 公共 API
 
     async def chat(
         self,

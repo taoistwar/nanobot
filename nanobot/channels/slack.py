@@ -1,4 +1,5 @@
 """Slack channel implementation using Socket Mode."""
+// Slack 频道实现，使用 Socket Mode
 
 import asyncio
 import re
@@ -20,6 +21,7 @@ from nanobot.config.schema import Base
 
 class SlackDMConfig(Base):
     """Slack DM policy configuration."""
+    // Slack DM 策略配置
 
     enabled: bool = True
     policy: str = "open"
@@ -28,6 +30,7 @@ class SlackDMConfig(Base):
 
 class SlackConfig(Base):
     """Slack channel configuration."""
+    // Slack 频道配置
 
     enabled: bool = False
     mode: str = "socket"
@@ -46,6 +49,7 @@ class SlackConfig(Base):
 
 class SlackChannel(BaseChannel):
     """Slack channel using Socket Mode."""
+    // Slack 频道，使用 Socket Mode
 
     name = "slack"
     display_name = "Slack"

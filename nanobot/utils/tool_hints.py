@@ -1,4 +1,4 @@
-"""Tool hint formatting for concise, human-readable tool call display."""
+"""用于简洁、人类可读的工具调用显示的工具提示格式化模块。"""
 
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ _PATH_IN_CMD_RE = re.compile(
 
 
 def format_tool_hints(tool_calls: list) -> str:
-    """Format tool calls as concise hints with smart abbreviation."""
+    """将工具调用格式化为带有智能缩写的简洁提示。"""
     if not tool_calls:
         return ""
 
@@ -55,7 +55,7 @@ def format_tool_hints(tool_calls: list) -> str:
 
 
 def _get_args(tc) -> dict:
-    """Extract args dict from tc.arguments, handling list/dict/None/empty."""
+    """从 tc.arguments 中提取参数字典，处理 list/dict/None/空值情况。"""
     if tc.arguments is None:
         return {}
     if isinstance(tc.arguments, list):
@@ -66,7 +66,7 @@ def _get_args(tc) -> dict:
 
 
 def _extract_arg(tc, key_args: list[str]) -> str | None:
-    """Extract the first available value from preferred key names."""
+    """从首选键名中提取第一个可用值。"""
     args = _get_args(tc)
     if not isinstance(args, dict):
         return None
@@ -81,7 +81,7 @@ def _extract_arg(tc, key_args: list[str]) -> str | None:
 
 
 def _fmt_known(tc, fmt: tuple) -> str:
-    """Format a registered tool using its template."""
+    """使用工具的模板格式化已注册的工具。"""
     val = _extract_arg(tc, fmt[0])
     if val is None:
         return tc.name
@@ -93,7 +93,7 @@ def _fmt_known(tc, fmt: tuple) -> str:
 
 
 def _abbreviate_command(cmd: str, max_len: int = 40) -> str:
-    """Abbreviate paths in a command string, then truncate."""
+    """缩放命令字符串中的路径，然后截断。"""
     def _replace_path(match: re.Match[str]) -> str:
         if match.group("double") is not None:
             return f'"{abbreviate_path(match.group("double"), max_len=25)}"'
@@ -108,7 +108,7 @@ def _abbreviate_command(cmd: str, max_len: int = 40) -> str:
 
 
 def _fmt_mcp(tc) -> str:
-    """Format MCP tool as server::tool."""
+    """将 MCP 工具格式化为 server::tool 的形式。"""
     name = tc.name
     if "__" in name:
         parts = name.split("__", 1)
@@ -129,7 +129,7 @@ def _fmt_mcp(tc) -> str:
 
 
 def _fmt_fallback(tc) -> str:
-    """Original formatting logic for unregistered tools."""
+    """用于未注册工具的原始格式化逻辑。"""
     args = _get_args(tc)
     val = next(iter(args.values()), None) if isinstance(args, dict) else None
     if not isinstance(val, str):

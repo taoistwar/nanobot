@@ -1,4 +1,5 @@
 """Personal WeChat (微信) channel using HTTP long-poll API.
+// 个人微信 (微信) 频道，使用 HTTP 长轮询 API
 
 Uses the ilinkai.weixin.qq.com API for personal WeChat messaging.
 No WebSocket, no local WeChat client needed — just HTTP requests with a
@@ -114,6 +115,7 @@ def _has_downloadable_media_locator(media: dict[str, Any] | None) -> bool:
 
 class WeixinConfig(Base):
     """Personal WeChat channel configuration."""
+    // 个人微信频道配置
 
     enabled: bool = False
     allow_from: list[str] = Field(default_factory=list)
@@ -133,6 +135,9 @@ class WeixinChannel(BaseChannel):
     WeChat messages. Authentication is via QR code login which produces
     a bot token.
     """
+    // 个人微信频道，使用 HTTP 长轮询
+    // 连接到 ilinkai.weixin.qq.com API 接收和发送个人微信消息
+    // 认证通过二维码登录，生成机器人 token
 
     name = "weixin"
     display_name = "WeChat"

@@ -14,7 +14,8 @@ from nanobot.utils.restart import set_restart_notice_to_env
 
 
 async def cmd_stop(ctx: CommandContext) -> OutboundMessage:
-    """Cancel all active tasks and subagents for the session."""
+    """Cancel all active tasks and subagents for the session.
+    取消会话的所有活跃任务和子代理。"""
     loop = ctx.loop
     msg = ctx.msg
     total = await loop._cancel_active_tasks(msg.session_key)
@@ -26,7 +27,8 @@ async def cmd_stop(ctx: CommandContext) -> OutboundMessage:
 
 
 async def cmd_restart(ctx: CommandContext) -> OutboundMessage:
-    """Restart the process in-place via os.execv."""
+    """Restart the process in-place via os.execv.
+    通过 os.execv 就地重启进程。"""
     msg = ctx.msg
     set_restart_notice_to_env(channel=msg.channel, chat_id=msg.chat_id)
 
@@ -42,7 +44,8 @@ async def cmd_restart(ctx: CommandContext) -> OutboundMessage:
 
 
 async def cmd_status(ctx: CommandContext) -> OutboundMessage:
-    """Build an outbound status message for a session."""
+    """Build an outbound status message for a session.
+    为会话构建出站状态消息。"""
     loop = ctx.loop
     session = ctx.session or loop.sessions.get_or_create(ctx.key)
     ctx_est = 0
@@ -92,7 +95,8 @@ async def cmd_status(ctx: CommandContext) -> OutboundMessage:
 
 
 async def cmd_new(ctx: CommandContext) -> OutboundMessage:
-    """Stop active task and start a fresh session."""
+    """Stop active task and start a fresh session.
+    停止活跃任务并开始新的会话。"""
     loop = ctx.loop
     await loop._cancel_active_tasks(ctx.key)
     session = ctx.session or loop.sessions.get_or_create(ctx.key)
@@ -110,7 +114,8 @@ async def cmd_new(ctx: CommandContext) -> OutboundMessage:
 
 
 async def cmd_dream(ctx: CommandContext) -> OutboundMessage:
-    """Manually trigger a Dream consolidation run."""
+    """Manually trigger a Dream consolidation run.
+    手动触发 Dream 整合运行。"""
     import time
 
     loop = ctx.loop
@@ -139,7 +144,8 @@ async def cmd_dream(ctx: CommandContext) -> OutboundMessage:
 
 
 def _extract_changed_files(diff: str) -> list[str]:
-    """Extract changed file paths from a unified diff."""
+    """Extract changed file paths from a unified diff.
+    从统一 diff 中提取更改的文件路径。"""
     files: list[str] = []
     seen: set[str] = set()
     for line in diff.splitlines():
@@ -159,6 +165,7 @@ def _extract_changed_files(diff: str) -> list[str]:
 
 
 def _format_changed_files(diff: str) -> str:
+    """格式化更改的文件列表。"""
     files = _extract_changed_files(diff)
     if not files:
         return "No tracked memory files changed."
@@ -166,6 +173,7 @@ def _format_changed_files(diff: str) -> str:
 
 
 def _format_dream_log_content(commit, diff: str, *, requested_sha: str | None = None) -> str:
+    """格式化 Dream 日志内容。"""
     files_line = _format_changed_files(diff)
     lines = [
         "## Dream Update",
@@ -194,6 +202,7 @@ def _format_dream_log_content(commit, diff: str, *, requested_sha: str | None = 
 
 
 def _format_dream_restore_list(commits: list) -> str:
+    """格式化 Dream 恢复列表。"""
     lines = [
         "## Dream Restore",
         "",
@@ -212,9 +221,12 @@ def _format_dream_restore_list(commits: list) -> str:
 
 async def cmd_dream_log(ctx: CommandContext) -> OutboundMessage:
     """Show what the last Dream changed.
+    显示上次 Dream 的更改内容。
 
     Default: diff of the latest commit (HEAD~1 vs HEAD).
+    默认：最新提交的 diff（HEAD~1 vs HEAD）。
     With /dream-log <sha>: diff of that specific commit.
+    使用 /dream-log <sha>：指定提交的 diff。
     """
     store = ctx.loop.consolidator.store
     git = store.git
@@ -262,10 +274,11 @@ async def cmd_dream_log(ctx: CommandContext) -> OutboundMessage:
 
 async def cmd_dream_restore(ctx: CommandContext) -> OutboundMessage:
     """Restore memory files from a previous dream commit.
+    从之前的 dream 提交恢复内存文件。
 
     Usage:
-        /dream-restore          — list recent commits
-        /dream-restore <sha>    — revert a specific commit
+        /dream-restore          — list recent commits / 列出最近提交
+        /dream-restore <sha>    — revert a specific commit / 恢复特定提交
     """
     store = ctx.loop.consolidator.store
     git = store.git
@@ -307,7 +320,8 @@ async def cmd_dream_restore(ctx: CommandContext) -> OutboundMessage:
 
 
 async def cmd_help(ctx: CommandContext) -> OutboundMessage:
-    """Return available slash commands."""
+    """Return available slash commands.
+    返回可用的斜杠命令列表。"""
     return OutboundMessage(
         channel=ctx.msg.channel,
         chat_id=ctx.msg.chat_id,
@@ -317,7 +331,8 @@ async def cmd_help(ctx: CommandContext) -> OutboundMessage:
 
 
 def build_help_text() -> str:
-    """Build canonical help text shared across channels."""
+    """Build canonical help text shared across channels.
+    构建跨渠道共享的规范帮助文本。"""
     lines = [
         "🐈 nanobot commands:",
         "/new — Stop current task and start a new conversation",
@@ -333,7 +348,8 @@ def build_help_text() -> str:
 
 
 def register_builtin_commands(router: CommandRouter) -> None:
-    """Register the default set of slash commands."""
+    """Register the default set of slash commands.
+    注册默认的斜杠命令集。"""
     router.priority("/stop", cmd_stop)
     router.priority("/restart", cmd_restart)
     router.priority("/status", cmd_status)
