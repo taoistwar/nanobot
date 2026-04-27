@@ -1,10 +1,14 @@
 # My Tool — Practical Examples
+My 工具 — 实用示例
 
 Concrete scenarios showing when and how to use the my tool effectively.
+展示何时以及如何有效使用 my 工具的具体场景。
 
 ## Diagnosis
+诊断
 
 ### "Why can't you search the web?"
+“你为什么不能搜索网页？”
 ```
 → my(action="check", key="web_config.enable")
   → False
@@ -12,6 +16,7 @@ Concrete scenarios showing when and how to use the my tool effectively.
 ```
 
 ### "Why did you stop?"
+“你为什么停下了？”
 ```
 → my(action="check", key="max_iterations")
   → 40
@@ -21,14 +26,17 @@ Concrete scenarios showing when and how to use the my tool effectively.
 ```
 
 ### "What model are you running?"
+“你正在运行什么模型？”
 ```
 → my(action="check", key="model")
   → 'anthropic/claude-sonnet-4-20250514'
 ```
 
 ## Adaptive Behavior
+自适应行为
 
 ### Large codebase analysis
+大型代码库分析
 ```
 → my(action="check")
   → context_window_tokens: 65536
@@ -38,6 +46,7 @@ Concrete scenarios showing when and how to use the my tool effectively.
 ```
 
 ### Switching to a faster model for repetitive tasks
+为重复性任务切换到更快的模型
 ```
 → my(action="set", key="model", value="anthropic/claude-haiku-4-5-20251001")
   → "Set model = 'anthropic/claude-haiku-4-5-20251001' (was 'anthropic/claude-sonnet-4-20250514')"
@@ -45,8 +54,10 @@ Concrete scenarios showing when and how to use the my tool effectively.
 ```
 
 ## Cross-Turn Memory
+跨轮次记忆
 
 ### Remembering user preferences
+记住用户偏好
 ```
 # Turn 1: user says "keep it brief"
 → my(action="set", key="user_style", value="concise")
@@ -59,6 +70,7 @@ Concrete scenarios showing when and how to use the my tool effectively.
 ```
 
 ### Tracking project context
+跟踪项目上下文
 ```
 → my(action="set", key="active_branch", value="feat/auth")
 → my(action="set", key="test_framework", value="pytest")
@@ -66,8 +78,10 @@ Concrete scenarios showing when and how to use the my tool effectively.
 ```
 
 ## Budget Awareness
+预算感知
 
 ### Token-conscious behavior
+Token 感知行为
 ```
 → my(action="check", key="_last_usage")
   → {"prompt_tokens": 58000, "completion_tokens": 12000}

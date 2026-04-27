@@ -1,14 +1,20 @@
 # Third-Party Notices
 
+# 第三方声明
+
 The following third-party components are redistributed as part of the packaged
 nanobot Python distribution (`pip install nanobot-ai`).
+
+以下第三方组件会作为打包后的 nanobot Python 发行版（`pip install nanobot-ai`）的一部分重新分发。
 
 ---
 
 ## KaTeX — math rendering (MIT)
 
-- **Source**: https://github.com/KaTeX/KaTeX
-- **Bundled**: `nanobot/web/dist/assets/index-*.{js,css}`
+## KaTeX — 数学渲染 (MIT)
+
+- **Source**: https://github.com/KaTeX/KaTeX<br>**来源**：https://github.com/KaTeX/KaTeX
+- **Bundled**: `nanobot/web/dist/assets/index-*.{js,css}`<br>**捆绑文件**：`nanobot/web/dist/assets/index-*.{js,css}`
 
 ```
 The MIT License (MIT)
@@ -38,10 +44,14 @@ SOFTWARE.
 
 ## KaTeX Fonts — math typography (SIL OFL 1.1)
 
-- **Source**: https://github.com/KaTeX/KaTeX/tree/main/src/fonts
-- **Bundled**: `nanobot/web/dist/assets/KaTeX_*.{woff2,woff,ttf}`
+## KaTeX Fonts — 数学字体排版 (SIL OFL 1.1)
+
+- **Source**: https://github.com/KaTeX/KaTeX/tree/main/src/fonts<br>**来源**：https://github.com/KaTeX/KaTeX/tree/main/src/fonts
+- **Bundled**: `nanobot/web/dist/assets/KaTeX_*.{woff2,woff,ttf}`<br>**捆绑文件**：`nanobot/web/dist/assets/KaTeX_*.{woff2,woff,ttf}`
 
 The fonts are redistributed unmodified.
+
+这些字体会以未经修改的形式重新分发。
 
 ```
 Copyright (c) 2009-2010, Design Science, Inc. (<www.mathjax.org>)
